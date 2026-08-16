@@ -199,6 +199,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                 <BookOpen size={18} />
                 <span>Classes Directory</span>
               </NavLink>
+              <NavLink to={`/m/${tenantSlug}/principal/subjects`} onClick={onClose} style={linkStyle}>
+                <BookOpen size={18} />
+                <span>Subjects Directory</span>
+              </NavLink>
               {isModuleActive('students') && (
                 <NavLink to={`/m/${tenantSlug}/principal/students`} onClick={onClose} style={linkStyle}>
                   <GraduationCap size={18} />

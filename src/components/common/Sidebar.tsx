@@ -104,6 +104,10 @@ export const Sidebar: React.FC = () => {
               <BookOpen size={18} />
               <span>Classes</span>
             </NavLink>
+            <NavLink to={`/m/${tenantSlug}/principal/subjects`} style={linkStyle}>
+              <BookOpen size={18} />
+              <span>Subjects</span>
+            </NavLink>
             {isModuleActive('students') && (
               <NavLink to={`/m/${tenantSlug}/principal/students`} style={linkStyle}>
                 <GraduationCap size={18} />

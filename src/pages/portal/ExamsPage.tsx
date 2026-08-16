@@ -13,12 +13,14 @@ import { Award, Plus, X, Edit2, Trash2, Check } from 'lucide-react';
 
 import { classService } from '../../services/classService';
 import { teacherService } from '../../services/teacherService';
+import { subjectService } from '../../services/subjectService';
 
 export const ExamsPage: React.FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
 
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [exams, setExams] = useState<ExamRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,11 +48,13 @@ export const ExamsPage: React.FC = () => {
   const loadData = async () => {
     if (tenant?.id) {
       setLoading(true);
-      const [eList, sList, cList] = await Promise.all([
+      const [eList, sList, cList, subList] = await Promise.all([
         examService.getExamsByTenant(tenant.id),
         studentService.getStudentsByTenant(tenant.id),
-        classService.getClassesByTenant(tenant.id)
+        classService.getClassesByTenant(tenant.id),
+        subjectService.getSubjectsByTenant(tenant.id)
       ]);
+      setAvailableSubjects(subList.map(s => s.name));
       let names = cList.map(c => c.name);
       if (user?.role === 'TEACHER' && user) {
         let teacherClasses = user.assignedClasses || [];
@@ -87,9 +91,9 @@ export const ExamsPage: React.FC = () => {
     setEditingExam(null);
     setTitle('Mid-Term Examination 2026');
     setSelectedClass(availableClasses[0] || '');
-    setSubject('Tajweed & Quran');
+    setSubject(availableSubjects[0] || '');
     setMaxMarks(100);
-    setExamDate('2026-10-15');
+    setExamDate(new Date().toISOString().substring(0, 10));
     setIsExamModalOpen(true);
   };
 
@@ -367,8 +371,14 @@ export const ExamsPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Subject</label>
-                  <input type="text" className="input-field" value={subject} onChange={e => setSubject(e.target.value)} />
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Subject *</label>
+                  {availableSubjects.length > 0 ? (
+                    <select className="input-field" value={subject} onChange={e => setSubject(e.target.value)}>
+                      {availableSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  ) : (
+                    <input type="text" className="input-field" placeholder="e.g. Tajweed, Fiqh" value={subject} onChange={e => setSubject(e.target.value)} required />
+                  )}
                 </div>
               </div>
 

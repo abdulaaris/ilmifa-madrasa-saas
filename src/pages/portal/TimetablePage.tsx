@@ -4,6 +4,7 @@ import { useTenant } from '../../context/TenantContext';
 import { timetableService } from '../../services/timetableService';
 import { classService } from '../../services/classService';
 import { teacherService } from '../../services/teacherService';
+import { subjectService } from '../../services/subjectService';
 import { TimetableSlot } from '../../types';
 import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
@@ -15,6 +16,7 @@ export const TimetablePage: React.FC = () => {
   const { tenant } = useTenant();
 
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,11 @@ export const TimetablePage: React.FC = () => {
   const loadData = async () => {
     if (tenant?.id) {
       setLoading(true);
-      const cList = await classService.getClassesByTenant(tenant.id);
+      const [cList, subList] = await Promise.all([
+        classService.getClassesByTenant(tenant.id),
+        subjectService.getSubjectsByTenant(tenant.id)
+      ]);
+      setAvailableSubjects(subList.map(s => s.name));
       let names = cList.map(c => c.name);
       if (user?.role === 'TEACHER' && user) {
         let teacherClasses = user.assignedClasses || [];
@@ -248,8 +254,14 @@ export const TimetablePage: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Subject Name</label>
-                <input type="text" className="input-field" value={subject} onChange={e => setSubject(e.target.value)} required />
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Subject Name *</label>
+                {availableSubjects.length > 0 ? (
+                  <select className="input-field" value={subject} onChange={e => setSubject(e.target.value)}>
+                    {availableSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                ) : (
+                  <input type="text" className="input-field" placeholder="e.g. Tajweed, Fiqh" value={subject} onChange={e => setSubject(e.target.value)} required />
+                )}
               </div>
 
               <div>

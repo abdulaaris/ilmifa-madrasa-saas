@@ -20,6 +20,7 @@ import { PrincipalDashboard } from './pages/portal/PrincipalDashboard';
 import { TeacherDashboard } from './pages/portal/TeacherDashboard';
 import { ParentDashboard } from './pages/portal/ParentDashboard';
 import { ClassesPage } from './pages/portal/ClassesPage';
+import { SubjectsPage } from './pages/portal/SubjectsPage';
 import { StudentsPage } from './pages/portal/StudentsPage';
 import { TeachersPage } from './pages/portal/TeachersPage';
 import { ParentsPage } from './pages/portal/ParentsPage';
@@ -53,6 +54,7 @@ export const App: React.FC = () => {
             {/* Principal Routes */}
             <Route path="/m/:tenantSlug/principal" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><PrincipalDashboard /></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/principal/classes" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ClassesPage /></RoleGuard></TenantGuard></AuthGuard>} />
+            <Route path="/m/:tenantSlug/principal/subjects" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><SubjectsPage /></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/principal/students" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="students"><StudentsPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/principal/teachers" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="teachers"><TeachersPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/principal/parents" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="parents"><ParentsPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />

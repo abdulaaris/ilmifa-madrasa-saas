@@ -206,3 +206,12 @@ export interface MadrasaHoliday {
   description?: string;
   createdAt: string;
 }
+
+export interface MadrasaSubject {
+  id: string;
+  tenantId: string;
+  name: string;
+  code?: string;
+  classId?: string;
+  createdAt: string;
+}
