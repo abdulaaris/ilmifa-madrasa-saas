@@ -110,5 +110,19 @@ export const userService = {
       parsed.updatedAt = new Date().toISOString();
       localStorage.setItem(localKey, JSON.stringify(parsed));
     }
+  },
+
+  /**
+   * Delete user profile doc from users/{uid} and local storage
+   */
+  async deleteUser(uid: string): Promise<void> {
+    try {
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'users', uid));
+    } catch (e) {
+      console.warn('Firestore deleteUser failed:', e);
+    }
+
+    localStorage.removeItem(`user_profile_${uid}`);
   }
 };

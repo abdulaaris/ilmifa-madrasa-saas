@@ -98,15 +98,34 @@ export const parentService = {
   },
 
   async deleteParent(tenantId: string, parentId: string): Promise<void> {
+    const localKey = `parents_${tenantId}`;
+    const existing: Parent[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const target = existing.find(p => p.id === parentId);
+
     try {
+      const parentRef = doc(db, 'madrasas', tenantId, 'parents', parentId);
+      const snap = await getDoc(parentRef);
+      let targetUid = target?.uid;
+      if (snap.exists()) {
+        const pData = snap.data() as Parent;
+        if (pData.uid) targetUid = pData.uid;
+      }
+
       const { deleteDoc } = await import('firebase/firestore');
-      await deleteDoc(doc(db, 'madrasas', tenantId, 'parents', parentId));
+      await deleteDoc(parentRef);
+
+      // Delete parent login profile from users/{uid}
+      if (targetUid) {
+        await userService.deleteUser(targetUid);
+      }
     } catch (e) {
       console.warn('Firestore deleteParent fallback:', e);
     }
 
-    const localKey = `parents_${tenantId}`;
-    const existing: Parent[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    if (target?.uid) {
+      await userService.deleteUser(target.uid);
+    }
+
     const filtered = existing.filter(p => p.id !== parentId);
     localStorage.setItem(localKey, JSON.stringify(filtered));
   }

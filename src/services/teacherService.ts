@@ -75,14 +75,23 @@ export const teacherService = {
   },
 
   async deleteTeacher(tenantId: string, teacherId: string): Promise<void> {
+    const localKey = `teachers_${tenantId}`;
+    const existing: Teacher[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const target = existing.find(t => t.id === teacherId);
+
     try {
       await deleteDoc(doc(db, 'madrasas', tenantId, 'teachers', teacherId));
+      if (target?.uid) {
+        await userService.deleteUser(target.uid);
+      }
     } catch (e) {
       console.warn('Firestore deleteTeacher fallback:', e);
     }
 
-    const localKey = `teachers_${tenantId}`;
-    const existing: Teacher[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    if (target?.uid) {
+      await userService.deleteUser(target.uid);
+    }
+
     const filtered = existing.filter(t => t.id !== teacherId);
     localStorage.setItem(localKey, JSON.stringify(filtered));
   }
