@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Parent } from '../types';
 import { userService } from './userService';
@@ -61,6 +61,29 @@ export const parentService = {
   async updateParent(tenantId: string, parentId: string, updates: Partial<Parent>): Promise<void> {
     try {
       await updateDoc(doc(db, 'madrasas', tenantId, 'parents', parentId), updates);
+
+      // Sync updated studentIds to users/{uid} document as well
+      const parentRef = doc(db, 'madrasas', tenantId, 'parents', parentId);
+      const snap = await getDoc(parentRef);
+      if (snap.exists()) {
+        const parentData = snap.data() as Parent;
+        if (parentData.uid) {
+          await updateDoc(doc(db, 'users', parentData.uid), { 
+            studentIds: parentData.studentIds || updates.studentIds || [],
+            phone: parentData.mobile || updates.mobile || ''
+          });
+
+          // Sync to localStorage profile backup
+          const localUserKey = `user_profile_${parentData.uid}`;
+          const uStr = localStorage.getItem(localUserKey);
+          if (uStr) {
+            const uObj = JSON.parse(uStr);
+            uObj.studentIds = parentData.studentIds || updates.studentIds || [];
+            uObj.phone = parentData.mobile || updates.mobile || '';
+            localStorage.setItem(localUserKey, JSON.stringify(uObj));
+          }
+        }
+      }
     } catch (e) {
       console.warn('Firestore updateParent fallback:', e);
     }
