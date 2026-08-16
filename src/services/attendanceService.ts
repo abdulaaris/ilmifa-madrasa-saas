@@ -53,7 +53,14 @@ export const attendanceService = {
     return all.find(r => r.classId === classId && r.date === date) || null;
   },
 
-  async getStudentAttendance(tenantId: string, studentId: string): Promise<{ present: number; absent: number; late: number; total: number; percentage: number }> {
+  async getStudentAttendance(tenantId: string, studentId: string): Promise<{ 
+    present: number; 
+    absent: number; 
+    late: number; 
+    total: number; 
+    percentage: number;
+    history: Array<{ date: string; status: 'present' | 'absent' | 'late' }>;
+  }> {
     let all: AttendanceRecord[] = [];
     try {
       const snap = await getDocs(collection(db, 'madrasas', tenantId, 'attendance'));
@@ -65,6 +72,7 @@ export const attendanceService = {
     let present = 0;
     let absent = 0;
     let late = 0;
+    const history: Array<{ date: string; status: 'present' | 'absent' | 'late' }> = [];
 
     all.forEach(rec => {
       if (rec.records && rec.records[studentId]) {
@@ -72,11 +80,15 @@ export const attendanceService = {
         if (st === 'present') present++;
         else if (st === 'absent') absent++;
         else if (st === 'late') late++;
+
+        history.push({ date: rec.date, status: st });
       }
     });
 
+    history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
     const total = present + absent + late;
     const percentage = total > 0 ? Math.round(((present + (late * 0.5)) / total) * 100) : 100;
-    return { present, absent, late, total, percentage };
+    return { present, absent, late, total, percentage, history };
   }
 };
