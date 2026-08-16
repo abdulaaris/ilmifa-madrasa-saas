@@ -93,6 +93,25 @@ export const userService = {
   },
 
   /**
+   * Update user profile document in users/{uid}
+   */
+  async updateUserProfile(uid: string, updates: Partial<UserProfile>): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'users', uid), { ...updates, updatedAt: new Date().toISOString() });
+    } catch (e) {
+      console.warn('Firestore updateUserProfile failed:', e);
+    }
+
+    const localKey = `user_profile_${uid}`;
+    const existing = localStorage.getItem(localKey);
+    if (existing) {
+      const parsed = JSON.parse(existing);
+      const updated = { ...parsed, ...updates, updatedAt: new Date().toISOString() };
+      localStorage.setItem(localKey, JSON.stringify(updated));
+    }
+  },
+
+  /**
    * Update user status (active, inactive, suspended)
    */
   async updateUserStatus(uid: string, status: UserStatus): Promise<void> {

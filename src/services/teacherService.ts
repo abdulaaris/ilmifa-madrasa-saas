@@ -59,15 +59,25 @@ export const teacherService = {
   },
 
   async updateTeacher(tenantId: string, teacherId: string, updates: Partial<Teacher>): Promise<void> {
+    const localKey = `teachers_${tenantId}`;
+    const existing: Teacher[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const idx = existing.findIndex(t => t.id === teacherId);
+    const target = idx >= 0 ? existing[idx] : null;
+
     try {
       await updateDoc(doc(db, 'madrasas', tenantId, 'teachers', teacherId), updates);
+      if (target?.uid) {
+        await userService.updateUserProfile(target.uid, {
+          assignedClasses: updates.assignedClasses,
+          subjects: updates.subjects,
+          displayName: updates.name,
+          phone: updates.mobile
+        });
+      }
     } catch (e) {
       console.warn('Firestore updateTeacher fallback:', e);
     }
 
-    const localKey = `teachers_${tenantId}`;
-    const existing: Teacher[] = JSON.parse(localStorage.getItem(localKey) || '[]');
-    const idx = existing.findIndex(t => t.id === teacherId);
     if (idx >= 0) {
       existing[idx] = { ...existing[idx], ...updates };
       localStorage.setItem(localKey, JSON.stringify(existing));

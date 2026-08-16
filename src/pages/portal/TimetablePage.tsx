@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { timetableService } from '../../services/timetableService';
 import { classService } from '../../services/classService';
+import { teacherService } from '../../services/teacherService';
 import { TimetableSlot } from '../../types';
 import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
@@ -36,8 +37,13 @@ export const TimetablePage: React.FC = () => {
       setLoading(true);
       const cList = await classService.getClassesByTenant(tenant.id);
       let names = cList.map(c => c.name);
-      if (user?.role === 'TEACHER') {
-        const teacherClasses = user.assignedClasses || [];
+      if (user?.role === 'TEACHER' && user) {
+        let teacherClasses = user.assignedClasses || [];
+        const tList = await teacherService.getTeachersByTenant(tenant.id);
+        const me = tList.find(t => (t.email && t.email.toLowerCase() === user.email.toLowerCase()) || t.uid === user.uid);
+        if (me && me.assignedClasses && me.assignedClasses.length > 0) {
+          teacherClasses = me.assignedClasses;
+        }
         names = names.filter(n => teacherClasses.includes(n));
       }
 

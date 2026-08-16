@@ -12,6 +12,8 @@ import { Plus, Trash2, Search, X, Edit2 } from 'lucide-react';
 
 import { classService } from '../../services/classService';
 
+import { teacherService } from '../../services/teacherService';
+
 export const StudentsPage: React.FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
@@ -46,8 +48,14 @@ export const StudentsPage: React.FC = () => {
       let names = cList.map(c => c.name);
 
       // If user is a Teacher, restrict dropdown and student list to ONLY assigned classes!
-      if (user?.role === 'TEACHER') {
-        const teacherClasses = user.assignedClasses || [];
+      if (user?.role === 'TEACHER' && user) {
+        let teacherClasses = user.assignedClasses || [];
+        const tList = await teacherService.getTeachersByTenant(tenant.id);
+        const me = tList.find(t => (t.email && t.email.toLowerCase() === user.email.toLowerCase()) || t.uid === user.uid);
+        if (me && me.assignedClasses && me.assignedClasses.length > 0) {
+          teacherClasses = me.assignedClasses;
+        }
+
         names = names.filter(n => teacherClasses.includes(n));
         const filteredStudents = sList.filter(s => teacherClasses.includes(s.classId));
         setStudents(filteredStudents);
