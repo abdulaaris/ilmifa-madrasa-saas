@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isActiveUser() {
+      return isAuthenticated() && getUserData().status == 'active';
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserData().role == 'SUPER_ADMIN';
+    }
+
+    function isSameTenant(tenantId) {
+      return isAuthenticated() && isActiveUser() && getUserData().tenantId == tenantId;
+    }
+
+    function isPrincipal(tenantId) {
+      return isSameTenant(tenantId) && getUserData().role == 'PRINCIPAL';
+    }
+
+    function isTeacher(tenantId) {
+      return isSameTenant(tenantId) && getUserData().role == 'TEACHER';
+    }
+
+    function isParent(tenantId) {
+      return isSameTenant(tenantId) && getUserData().role == 'PARENT';
+    }
+
+    // User Profile Documents
+    match /users/{uid} {
+      allow read: if isAuthenticated() && (request.auth.uid == uid || isSuperAdmin() || getUserData().tenantId == resource.data.tenantId);
+      allow write: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == uid);
+    }
+
+    // Madrasa Tenant Documents & Scoped Sub-collections
+    match /madrasas/{tenantId} {
+      allow read: if true; // Public tenant resolution for login portal
+      allow write: if isSuperAdmin() || isPrincipal(tenantId);
+
+      // Scoped Tenant Data Sub-collections
+      match /{allSubcollections=**} {
+        allow read: if isSuperAdmin() || isSameTenant(tenantId);
+        allow create, update: if isSuperAdmin() || isPrincipal(tenantId) || isTeacher(tenantId);
+        allow delete: if isSuperAdmin() || isPrincipal(tenantId);
+      }
+    }
+  }
+}
