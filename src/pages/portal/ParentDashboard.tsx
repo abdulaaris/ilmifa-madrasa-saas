@@ -32,7 +32,7 @@ export const ParentDashboard: React.FC = () => {
     late: number;
     total: number; 
     percentage: number;
-    history: Array<{ date: string; status: 'present' | 'absent' | 'late' }>;
+    history: Array<{ date: string; status: 'present' | 'absent' | 'late' | 'holiday'; holidayTitle?: string }>;
   }>({ present: 0, absent: 0, late: 0, total: 0, percentage: 100, history: [] });
 
   const [childFees, setChildFees] = useState<FeeRecord[]>([]);
@@ -343,7 +343,12 @@ export const ParentDashboard: React.FC = () => {
                                 Daily Status for Date: <strong>{selectedDate}</strong>
                               </div>
 
-                              {dailyRecord ? (
+                              {holidayService.isFriday(selectedDate) || dailyRecord?.status === 'holiday' ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#047857', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '12px 18px', borderRadius: '10px', fontWeight: 700, fontSize: '15px', width: '100%' }}>
+                                  <span style={{ fontSize: '20px' }}>🕌</span>
+                                  <span>{dailyRecord?.holidayTitle || 'Weekly Friday (Jummah) Holiday'} — Excused for all students.</span>
+                                </div>
+                              ) : dailyRecord ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                                   {dailyRecord.status === 'present' && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#047857', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '12px 18px', borderRadius: '10px', fontWeight: 700, fontSize: '16px', width: '100%' }}>
@@ -363,11 +368,6 @@ export const ParentDashboard: React.FC = () => {
                                       <span>⏰ Late Arrival on {selectedDate}</span>
                                     </div>
                                   )}
-                                </div>
-                              ) : holidayService.isFriday(selectedDate) ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#047857', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '12px 18px', borderRadius: '10px', fontWeight: 700, fontSize: '15px', width: '100%' }}>
-                                  <span style={{ fontSize: '20px' }}>🕌</span>
-                                  <span>Weekly Friday (Jummah) Holiday — Excused for all students.</span>
                                 </div>
                               ) : (
                                 <div style={{ padding: '16px', backgroundColor: '#FFF', borderRadius: '8px', border: '1px border #E5E7EB', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
@@ -443,6 +443,11 @@ export const ParentDashboard: React.FC = () => {
                                         📅 {h.date}
                                       </div>
                                       <div>
+                                        {h.status === 'holiday' && (
+                                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#047857', backgroundColor: '#ECFDF5', padding: '2px 8px', borderRadius: '6px', border: '1px solid #A7F3D0' }}>
+                                            🕌 {h.holidayTitle || 'Friday Holiday'}
+                                          </span>
+                                        )}
                                         {h.status === 'present' && (
                                           <span style={{ fontSize: '12px', fontWeight: 600, color: '#059669', backgroundColor: '#ECFDF5', padding: '2px 8px', borderRadius: '6px', border: '1px solid #A7F3D0' }}>
                                             ✓ Present

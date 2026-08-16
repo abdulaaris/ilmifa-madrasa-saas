@@ -1,6 +1,7 @@
 import { collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { AttendanceRecord } from '../types';
+import { holidayService } from './holidayService';
 
 export const attendanceService = {
   async saveAttendance(
@@ -59,7 +60,7 @@ export const attendanceService = {
     late: number; 
     total: number; 
     percentage: number;
-    history: Array<{ date: string; status: 'present' | 'absent' | 'late' }>;
+    history: Array<{ date: string; status: 'present' | 'absent' | 'late' | 'holiday'; holidayTitle?: string }>;
   }> {
     let all: AttendanceRecord[] = [];
     try {
@@ -69,19 +70,34 @@ export const attendanceService = {
       all = JSON.parse(localStorage.getItem(`attendance_${tenantId}`) || '[]');
     }
 
+    // Also fetch custom holidays for this tenant
+    const customHolidays = await holidayService.getHolidaysByTenant(tenantId);
+
     let present = 0;
     let absent = 0;
     let late = 0;
-    const history: Array<{ date: string; status: 'present' | 'absent' | 'late' }> = [];
+    const history: Array<{ date: string; status: 'present' | 'absent' | 'late' | 'holiday'; holidayTitle?: string }> = [];
 
     all.forEach(rec => {
       if (rec.records && rec.records[studentId]) {
-        const st = rec.records[studentId];
-        if (st === 'present') present++;
-        else if (st === 'absent') absent++;
-        else if (st === 'late') late++;
+        // Check if date is a Friday or declared custom holiday
+        const holidayInfo = holidayService.checkHolidayStatus(rec.date, customHolidays);
 
-        history.push({ date: rec.date, status: st });
+        if (holidayInfo.isHoliday) {
+          // Friday or custom holiday OVERRIDES any previously saved 'present'/'absent'/'late' status!
+          history.push({ 
+            date: rec.date, 
+            status: 'holiday', 
+            holidayTitle: holidayInfo.title || 'Madrasa Holiday' 
+          });
+        } else {
+          const st = rec.records[studentId];
+          if (st === 'present') present++;
+          else if (st === 'absent') absent++;
+          else if (st === 'late') late++;
+
+          history.push({ date: rec.date, status: st });
+        }
       }
     });
 
