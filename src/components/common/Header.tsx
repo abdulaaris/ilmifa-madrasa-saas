@@ -34,6 +34,7 @@ export const Header: React.FC = () => {
           {/* Mobile Left Drawer Toggle Button */}
           <button
             onClick={() => setIsDrawerOpen(true)}
+            className="mobile-only"
             style={{
               background: '#F3F4F6',
               border: '1px solid #E5E7EB',
