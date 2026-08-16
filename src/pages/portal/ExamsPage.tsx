@@ -49,9 +49,6 @@ export const ExamsPage: React.FC = () => {
       ]);
       setExams(eList);
       setStudents(sList);
-      if (sList.length > 0 && !selectedStudentId) {
-        setSelectedStudentId(sList[0].id);
-      }
       setLoading(false);
     }
   };
@@ -78,6 +75,21 @@ export const ExamsPage: React.FC = () => {
     setMaxMarks(ex.maxMarks);
     setExamDate(ex.examDate);
     setIsExamModalOpen(true);
+  };
+
+  const openEnterMarksModal = (ex: ExamRecord) => {
+    setSelectedExam(ex);
+    const classStudents = students.filter(s => s.classId === ex.classId);
+    if (classStudents.length > 0) {
+      setSelectedStudentId(classStudents[0].id);
+    } else if (students.length > 0) {
+      setSelectedStudentId(students[0].id);
+    } else {
+      setSelectedStudentId('');
+    }
+    setObtainedMarks(85);
+    setRemarks('Good academic performance.');
+    setResultSuccess(false);
   };
 
   const handleSaveExam = async (e: React.FormEvent) => {
@@ -115,13 +127,19 @@ export const ExamsPage: React.FC = () => {
     if (!tenant?.id || !selectedExam || !selectedStudentId) return;
     setSavingResult(true);
 
-    const st = students.find(s => s.id === selectedStudentId);
+    const targetStudent = students.find(s => s.id === selectedStudentId);
+
+    if (!targetStudent) {
+      alert('Selected student not found.');
+      setSavingResult(false);
+      return;
+    }
 
     await examService.saveResult(tenant.id, {
       examId: selectedExam.id,
       examTitle: selectedExam.title,
-      studentId: selectedStudentId,
-      studentName: st?.name || 'Student',
+      studentId: targetStudent.id,
+      studentName: targetStudent.name,
       classId: selectedExam.classId,
       subject: selectedExam.subject,
       maxMarks: selectedExam.maxMarks,
@@ -134,7 +152,7 @@ export const ExamsPage: React.FC = () => {
     setTimeout(() => {
       setResultSuccess(false);
       setSelectedExam(null);
-    }, 1500);
+    }, 1200);
   };
 
   return (
@@ -199,7 +217,7 @@ export const ExamsPage: React.FC = () => {
 
                   {canEdit && (
                     <button 
-                      onClick={() => setSelectedExam(ex)} 
+                      onClick={() => openEnterMarksModal(ex)} 
                       className="btn btn-outline btn-full btn-sm"
                       style={{ gap: '6px' }}
                     >
@@ -271,13 +289,15 @@ export const ExamsPage: React.FC = () => {
       {/* Enter Marks Modal */}
       {selectedExam && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '480px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '500px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
-                  Enter Marks — {selectedExam.title}
+                  Enter Student Marks
                 </h3>
-                <div style={{ fontSize: '12px', color: '#6B7280' }}>Class: {selectedExam.classId} • Max: {selectedExam.maxMarks} Marks</div>
+                <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                  {selectedExam.title} • Class: {selectedExam.classId} • Max: {selectedExam.maxMarks} Marks
+                </div>
               </div>
               <button onClick={() => setSelectedExam(null)} className="btn btn-ghost btn-sm">
                 <X size={20} />
@@ -286,22 +306,37 @@ export const ExamsPage: React.FC = () => {
 
             {resultSuccess ? (
               <div style={{ padding: '24px', textAlign: 'center', color: '#059669', fontWeight: 600, fontSize: '16px' }}>
-                ✓ Result Record Saved Successfully!
+                ✓ Marks Record Saved for Selected Student!
               </div>
             ) : (
               <form onSubmit={handleSaveResult} style={{ display: 'grid', gap: '14px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Select Student</label>
-                  <select className="input-field" value={selectedStudentId} onChange={e => setSelectedStudentId(e.target.value)}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px', color: '#7B2525' }}>Select Target Student *</label>
+                  <select 
+                    className="input-field" 
+                    value={selectedStudentId} 
+                    onChange={e => setSelectedStudentId(e.target.value)}
+                    style={{ fontWeight: 600, borderColor: '#7B2525' }}
+                    required
+                  >
                     {students.filter(s => s.classId === selectedExam.classId).map(s => (
                       <option key={s.id} value={s.id}>{s.name} ({s.studentCode})</option>
                     ))}
+                    {students.filter(s => s.classId === selectedExam.classId).length === 0 && (
+                      <option value="">No students in class {selectedExam.classId}</option>
+                    )}
                   </select>
                 </div>
 
+                {selectedStudentId && (
+                  <div style={{ padding: '10px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '12px', color: '#1E40AF' }}>
+                    🎯 Saving result strictly for: <strong>{students.find(s => s.id === selectedStudentId)?.name}</strong> (Code: {students.find(s => s.id === selectedStudentId)?.studentCode})
+                  </div>
+                )}
+
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Obtained Marks (out of {selectedExam.maxMarks})</label>
-                  <input type="number" className="input-field" value={obtainedMarks} onChange={e => setObtainedMarks(Number(e.target.value))} max={selectedExam.maxMarks} />
+                  <input type="number" className="input-field" value={obtainedMarks} onChange={e => setObtainedMarks(Number(e.target.value))} max={selectedExam.maxMarks} required />
                 </div>
 
                 <div>
@@ -311,8 +346,8 @@ export const ExamsPage: React.FC = () => {
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                   <button type="button" onClick={() => setSelectedExam(null)} className="btn btn-outline">Cancel</button>
-                  <button type="submit" disabled={savingResult} className="btn btn-primary">
-                    {savingResult ? 'Saving...' : 'Save Result'}
+                  <button type="submit" disabled={savingResult || !selectedStudentId} className="btn btn-primary">
+                    {savingResult ? 'Saving Marks...' : 'Save Result'}
                   </button>
                 </div>
               </form>
