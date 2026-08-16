@@ -28,7 +28,7 @@ export const TeacherDashboard: React.FC = () => {
     }
   }, [tenant]);
 
-  const assignedClasses = user?.assignedClasses || ['Hifz - Level 1', 'Primary - Grade 1'];
+  const assignedClasses = user?.assignedClasses || [];
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#F7F5F2' }}>
@@ -89,19 +89,25 @@ export const TeacherDashboard: React.FC = () => {
           {/* Assigned Classes */}
           <div className="card" style={{ padding: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#252525', marginBottom: '16px' }}>
-              My Assigned Classes
+              My Assigned Classes ({assignedClasses.length})
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
-              {assignedClasses.map((cls, idx) => (
-                <div key={idx} style={{ padding: '16px', backgroundColor: '#FAF9F7', border: '1px solid #E2DDD5', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <BookOpen size={24} style={{ color: '#7B2525' }} />
-                  <div>
-                    <div style={{ fontWeight: 600, color: '#252525', fontSize: '15px' }}>{cls}</div>
-                    <div style={{ fontSize: '12px', color: '#666' }}>Active Academic Class</div>
+            {assignedClasses.length === 0 ? (
+              <div style={{ padding: '20px', backgroundColor: '#FAF9F7', borderRadius: '8px', color: '#666', fontSize: '13px', textAlign: 'center' }}>
+                No classes currently assigned to your account by the Principal.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                {assignedClasses.map((cls, idx) => (
+                  <div key={idx} style={{ padding: '16px', backgroundColor: '#FAF9F7', border: '1px solid #E2DDD5', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <BookOpen size={24} style={{ color: '#7B2525' }} />
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#252525', fontSize: '15px' }}>{cls}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>Active Academic Class</div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </main>
       </div>

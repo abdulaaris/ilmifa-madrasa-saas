@@ -51,10 +51,18 @@ export const ExamsPage: React.FC = () => {
         studentService.getStudentsByTenant(tenant.id),
         classService.getClassesByTenant(tenant.id)
       ]);
-      setExams(eList);
+      let names = cList.map(c => c.name);
+      if (user?.role === 'TEACHER') {
+        const teacherClasses = user.assignedClasses || [];
+        names = names.filter(n => teacherClasses.includes(n));
+        const filteredExams = eList.filter(e => teacherClasses.includes(e.classId));
+        setExams(filteredExams);
+      } else {
+        setExams(eList);
+      }
+
       setStudents(sList);
-      if (cList.length > 0) {
-        const names = cList.map(c => c.name);
+      if (names.length > 0) {
         setAvailableClasses(names);
         setSelectedClass(names[0]);
       } else {

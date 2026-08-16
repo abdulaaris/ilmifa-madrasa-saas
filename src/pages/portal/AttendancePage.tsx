@@ -38,8 +38,13 @@ export const AttendancePage: React.FC = () => {
         classService.getClassesByTenant(tenant.id)
       ]);
 
-      if (cList.length > 0) {
-        const names = cList.map((c: MadrasaClass) => c.name);
+      let names = cList.map((c: MadrasaClass) => c.name);
+      if (user?.role === 'TEACHER') {
+        const teacherClasses = user.assignedClasses || [];
+        names = names.filter(n => teacherClasses.includes(n));
+      }
+
+      if (names.length > 0) {
         setAvailableClasses(names);
         if (!selectedClass || !names.includes(selectedClass)) {
           setSelectedClass(names[0]);

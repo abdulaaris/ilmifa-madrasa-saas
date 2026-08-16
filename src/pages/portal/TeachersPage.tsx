@@ -290,14 +290,37 @@ export const TeachersPage: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Assigned Class</label>
-                <select className="input-field" value={selectedClasses[0] || ''} onChange={e => setSelectedClasses([e.target.value])}>
-                  {availableClasses.length === 0 ? (
-                    <option value="">No custom classes created yet</option>
-                  ) : (
-                    availableClasses.map(c => <option key={c} value={c}>{c}</option>)
-                  )}
-                </select>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#252525', marginBottom: '6px' }}>
+                  Assigned Classes (Select all classes this teacher handles) *
+                </label>
+                {availableClasses.length === 0 ? (
+                  <div style={{ fontSize: '13px', color: '#6B7280', padding: '10px 12px', backgroundColor: '#F3F4F6', borderRadius: '8px' }}>
+                    No custom classes created yet. Please create classes first in the Classes tab.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px', maxHeight: '140px', overflowY: 'auto', padding: '10px', backgroundColor: '#FAF9F7', border: '1px solid #E5E7EB', borderRadius: '10px' }}>
+                    {availableClasses.map(c => {
+                      const isChecked = selectedClasses.includes(c);
+                      return (
+                        <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', backgroundColor: isChecked ? 'rgba(123, 37, 37, 0.08)' : '#FFF', border: isChecked ? '1px solid #7B2525' : '1px solid #E5E7EB', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: isChecked ? 600 : 400, color: isChecked ? '#7B2525' : '#374151' }}>
+                          <input 
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setSelectedClasses([...selectedClasses, c]);
+                              } else {
+                                setSelectedClasses(selectedClasses.filter(sc => sc !== c));
+                              }
+                            }}
+                            style={{ accentColor: '#7B2525' }}
+                          />
+                          <span>{c}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div>

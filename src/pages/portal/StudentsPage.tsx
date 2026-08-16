@@ -42,9 +42,20 @@ export const StudentsPage: React.FC = () => {
         studentService.getStudentsByTenant(tenant.id),
         classService.getClassesByTenant(tenant.id)
       ]);
-      setStudents(sList);
-      if (cList.length > 0) {
-        const names = cList.map(c => c.name);
+
+      let names = cList.map(c => c.name);
+
+      // If user is a Teacher, restrict dropdown and student list to ONLY assigned classes!
+      if (user?.role === 'TEACHER') {
+        const teacherClasses = user.assignedClasses || [];
+        names = names.filter(n => teacherClasses.includes(n));
+        const filteredStudents = sList.filter(s => teacherClasses.includes(s.classId));
+        setStudents(filteredStudents);
+      } else {
+        setStudents(sList);
+      }
+
+      if (names.length > 0) {
         setAvailableClasses(names);
         setSelectedClass(names[0]);
       } else {
