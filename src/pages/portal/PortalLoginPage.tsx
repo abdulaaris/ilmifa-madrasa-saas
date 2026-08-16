@@ -28,16 +28,25 @@ export const PortalLoginPage: React.FC = () => {
     }
   }, [tenantSlug, resolveTenant]);
 
-  // If tenant user is already authenticated and matches tenant -> redirect to role dashboard
+  // If tenant user is already authenticated and matches tenant -> check role tab & redirect or show warning
   useEffect(() => {
     if (user && tenant && user.role !== 'SUPER_ADMIN') {
       if (user.tenantId === tenant.id) {
-        if (user.role === 'PRINCIPAL') navigate(`/m/${tenant.slug}/principal`);
-        else if (user.role === 'TEACHER') navigate(`/m/${tenant.slug}/teacher`);
-        else if (user.role === 'PARENT') navigate(`/m/${tenant.slug}/parent`);
+        if (user.role !== activeRoleTab) {
+          // Role mismatch! Do not auto-navigate. Logout and set red error!
+          const tabTitle = activeRoleTab.charAt(0) + activeRoleTab.slice(1).toLowerCase();
+          const userRoleTitle = user.role.charAt(0) + user.role.slice(1).toLowerCase();
+          authService.logout().then(() => {
+            setError(`You are not a ${tabTitle}. Your account is registered as a ${userRoleTitle}. Please select the ${userRoleTitle} tab to log in.`);
+          });
+        } else {
+          if (user.role === 'PRINCIPAL') navigate(`/m/${tenant.slug}/principal`);
+          else if (user.role === 'TEACHER') navigate(`/m/${tenant.slug}/teacher`);
+          else if (user.role === 'PARENT') navigate(`/m/${tenant.slug}/parent`);
+        }
       }
     }
-  }, [user, tenant, navigate]);
+  }, [user, tenant, activeRoleTab, navigate]);
 
   if (loadingTenant) {
     return <LoadingScreen message="Loading Madrasa Portal..." />;
@@ -286,8 +295,23 @@ export const PortalLoginPage: React.FC = () => {
         </div>
 
         {error && (
-          <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', fontSize: '13px', marginBottom: '16px' }}>
-            ⚠️ {error}
+          <div style={{ 
+            padding: '14px 16px', 
+            borderRadius: '12px', 
+            backgroundColor: '#FEF2F2', 
+            border: '1.5px solid #FCA5A5', 
+            color: '#991B1B', 
+            fontSize: '13px', 
+            fontWeight: 600,
+            lineHeight: 1.4,
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.08)'
+          }}>
+            <span style={{ fontSize: '18px' }}>⚠️</span>
+            <span>{error}</span>
           </div>
         )}
 
