@@ -1,10 +1,24 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTenant } from '../context/TenantContext';
+import { LoadingScreen } from '../components/common/LoadingScreen';
 
 export const TenantGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const { tenant } = useTenant();
+  const { user, loading: authLoading } = useAuth();
+  const { tenant, loadingTenant, resolveTenant } = useTenant();
+  const params = useParams();
+  const tenantSlug = params.tenantSlug;
+
+  useEffect(() => {
+    if (!tenant && tenantSlug) {
+      resolveTenant(tenantSlug);
+    }
+  }, [tenant, tenantSlug, resolveTenant]);
+
+  if (authLoading || loadingTenant || (!tenant && tenantSlug)) {
+    return <LoadingScreen message="Resolving Madrasa Portal..." />;
+  }
 
   if (!user || !tenant) return null;
 

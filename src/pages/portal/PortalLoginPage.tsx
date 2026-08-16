@@ -108,6 +108,14 @@ export const PortalLoginPage: React.FC = () => {
     }
   };
 
+  if (loadingTenant || (!tenant && tenantSlug && !tenantError)) {
+    return <LoadingScreen message="Loading Madrasa Portal..." />;
+  }
+
+  if (tenantError || (!tenant && tenantSlug)) {
+    return <TenantNotFound slug={tenantSlug || 'unknown'} />;
+  }
+
   return (
     <div style={{
       minHeight: '100vh',
