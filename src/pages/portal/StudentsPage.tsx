@@ -16,7 +16,7 @@ export const StudentsPage: React.FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
   const [students, setStudents] = useState<Student[]>([]);
-  const [availableClasses, setAvailableClasses] = useState<string[]>(CLASS_OPTIONS);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,7 @@ export const StudentsPage: React.FC = () => {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [name, setName] = useState('');
   const [studentCode, setStudentCode] = useState('');
-  const [selectedClass, setSelectedClass] = useState(CLASS_OPTIONS[0]);
+  const [selectedClass, setSelectedClass] = useState('');
   const [section, setSection] = useState('A');
   const [parentName, setParentName] = useState('');
   const [parentPhone, setParentPhone] = useState('');
@@ -47,6 +47,9 @@ export const StudentsPage: React.FC = () => {
         const names = cList.map(c => c.name);
         setAvailableClasses(names);
         setSelectedClass(names[0]);
+      } else {
+        setAvailableClasses([]);
+        setSelectedClass('');
       }
       setLoading(false);
     }
@@ -60,7 +63,7 @@ export const StudentsPage: React.FC = () => {
     setEditingStudent(null);
     setName('');
     setStudentCode('');
-    setSelectedClass(CLASS_OPTIONS[0]);
+    setSelectedClass(availableClasses[0] || '');
     setSection('A');
     setParentName('');
     setParentPhone('');

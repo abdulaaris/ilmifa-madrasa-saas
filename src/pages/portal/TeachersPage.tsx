@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { teacherService } from '../../services/teacherService';
+import { classService } from '../../services/classService';
 import { CLASS_OPTIONS } from '../../config/constants';
 import { Teacher } from '../../types';
 import { Header } from '../../components/common/Header';
@@ -14,6 +15,7 @@ export const TeachersPage: React.FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -27,7 +29,7 @@ export const TeachersPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [mobile, setMobile] = useState('');
-  const [selectedClasses, setSelectedClasses] = useState<string[]>([CLASS_OPTIONS[0]]);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [subjectsStr, setSubjectsStr] = useState('Arabic, Tajweed, Quran');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,8 +37,19 @@ export const TeachersPage: React.FC = () => {
   const loadData = async () => {
     if (tenant?.id) {
       setLoading(true);
-      const list = await teacherService.getTeachersByTenant(tenant.id);
-      setTeachers(list);
+      const [tList, cList] = await Promise.all([
+        teacherService.getTeachersByTenant(tenant.id),
+        classService.getClassesByTenant(tenant.id)
+      ]);
+      setTeachers(tList);
+      if (cList.length > 0) {
+        const names = cList.map(c => c.name);
+        setAvailableClasses(names);
+        setSelectedClasses([names[0]]);
+      } else {
+        setAvailableClasses([]);
+        setSelectedClasses([]);
+      }
       setLoading(false);
     }
   };
@@ -51,7 +64,7 @@ export const TeachersPage: React.FC = () => {
     setEmail('');
     setPass('');
     setMobile('');
-    setSelectedClasses([CLASS_OPTIONS[0]]);
+    setSelectedClasses(availableClasses.length > 0 ? [availableClasses[0]] : []);
     setSubjectsStr('Arabic, Tajweed, Quran');
     setError(null);
     setIsModalOpen(true);
@@ -278,8 +291,12 @@ export const TeachersPage: React.FC = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Assigned Class</label>
-                <select className="input-field" value={selectedClasses[0]} onChange={e => setSelectedClasses([e.target.value])}>
-                  {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                <select className="input-field" value={selectedClasses[0] || ''} onChange={e => setSelectedClasses([e.target.value])}>
+                  {availableClasses.length === 0 ? (
+                    <option value="">No custom classes created yet</option>
+                  ) : (
+                    availableClasses.map(c => <option key={c} value={c}>{c}</option>)
+                  )}
                 </select>
               </div>
 

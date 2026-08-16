@@ -17,7 +17,7 @@ export const ExamsPage: React.FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
 
-  const [availableClasses, setAvailableClasses] = useState<string[]>(CLASS_OPTIONS);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [exams, setExams] = useState<ExamRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,7 @@ export const ExamsPage: React.FC = () => {
   const [isExamModalOpen, setIsExamModalOpen] = useState(false);
   const [editingExam, setEditingExam] = useState<ExamRecord | null>(null);
   const [title, setTitle] = useState('Mid-Term Examination 2026');
-  const [selectedClass, setSelectedClass] = useState(CLASS_OPTIONS[0]);
+  const [selectedClass, setSelectedClass] = useState('');
   const [subject, setSubject] = useState('Tajweed & Quran');
   const [maxMarks, setMaxMarks] = useState<number>(100);
   const [examDate, setExamDate] = useState('2026-10-15');
@@ -57,6 +57,9 @@ export const ExamsPage: React.FC = () => {
         const names = cList.map(c => c.name);
         setAvailableClasses(names);
         setSelectedClass(names[0]);
+      } else {
+        setAvailableClasses([]);
+        setSelectedClass('');
       }
       setLoading(false);
     }
@@ -69,7 +72,7 @@ export const ExamsPage: React.FC = () => {
   const openCreateExamModal = () => {
     setEditingExam(null);
     setTitle('Mid-Term Examination 2026');
-    setSelectedClass(CLASS_OPTIONS[0]);
+    setSelectedClass(availableClasses[0] || '');
     setSubject('Tajweed & Quran');
     setMaxMarks(100);
     setExamDate('2026-10-15');

@@ -27,19 +27,4 @@ export const ALL_MODULES: { id: MadrasaModule; label: string; description: strin
   { id: 'reports', label: 'Reports', description: 'Analytics and printable academic/financial reports' },
 ];
 
-export const CLASS_OPTIONS = [
-  'Hifz - Level 1',
-  'Hifz - Level 2',
-  'Hifz - Level 3',
-  'Aalimiyyah - Year 1',
-  'Aalimiyyah - Year 2',
-  'Aalimiyyah - Year 3',
-  'Primary - Grade 1',
-  'Primary - Grade 2',
-  'Primary - Grade 3',
-  'Primary - Grade 4',
-  'Primary - Grade 5',
-  'Secondary - Grade 6',
-  'Secondary - Grade 7',
-  'Secondary - Grade 8',
-];
+export const CLASS_OPTIONS: string[] = [];

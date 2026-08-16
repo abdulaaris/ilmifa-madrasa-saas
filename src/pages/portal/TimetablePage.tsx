@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { timetableService } from '../../services/timetableService';
-import { CLASS_OPTIONS } from '../../config/constants';
+import { classService } from '../../services/classService';
 import { TimetableSlot } from '../../types';
 import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
@@ -13,7 +13,8 @@ export const TimetablePage: React.FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
 
-  const [selectedClass, setSelectedClass] = useState(CLASS_OPTIONS[0]);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [selectedClass, setSelectedClass] = useState('');
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,8 +34,24 @@ export const TimetablePage: React.FC = () => {
   const loadData = async () => {
     if (tenant?.id) {
       setLoading(true);
-      const list = await timetableService.getTimetableByClass(tenant.id, selectedClass);
-      setSlots(list);
+      const cList = await classService.getClassesByTenant(tenant.id);
+      if (cList.length > 0) {
+        const names = cList.map(c => c.name);
+        setAvailableClasses(names);
+        if (!selectedClass || !names.includes(selectedClass)) {
+          setSelectedClass(names[0]);
+        }
+      } else {
+        setAvailableClasses([]);
+        setSelectedClass('');
+      }
+
+      if (selectedClass) {
+        const list = await timetableService.getTimetableByClass(tenant.id, selectedClass);
+        setSlots(list);
+      } else {
+        setSlots([]);
+      }
       setLoading(false);
     }
   };
@@ -134,7 +151,11 @@ export const TimetablePage: React.FC = () => {
           <div className="card" style={{ padding: '16px', marginBottom: '24px' }}>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>Select Class Schedule</label>
             <select className="input-field" value={selectedClass} onChange={e => setSelectedClass(e.target.value)} style={{ maxWidth: '300px' }}>
-              {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+              {availableClasses.length === 0 ? (
+                <option value="">No custom classes created yet</option>
+              ) : (
+                availableClasses.map(c => <option key={c} value={c}>{c}</option>)
+              )}
             </select>
           </div>
 

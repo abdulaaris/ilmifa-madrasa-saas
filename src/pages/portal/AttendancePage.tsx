@@ -18,8 +18,8 @@ export const AttendancePage: React.FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
 
-  const [availableClasses, setAvailableClasses] = useState<string[]>(CLASS_OPTIONS);
-  const [selectedClass, setSelectedClass] = useState(CLASS_OPTIONS[0]);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [selectedClass, setSelectedClass] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [students, setStudents] = useState<Student[]>([]);
   const [records, setRecords] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
@@ -41,6 +41,12 @@ export const AttendancePage: React.FC = () => {
       if (cList.length > 0) {
         const names = cList.map((c: MadrasaClass) => c.name);
         setAvailableClasses(names);
+        if (!selectedClass || !names.includes(selectedClass)) {
+          setSelectedClass(names[0]);
+        }
+      } else {
+        setAvailableClasses([]);
+        setSelectedClass('');
       }
       
       // If parent -> filter only their linked children
