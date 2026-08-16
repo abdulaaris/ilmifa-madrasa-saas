@@ -73,7 +73,7 @@ export const App: React.FC = () => {
             {/* Parent Routes */}
             <Route path="/m/:tenantSlug/parent" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PARENT']}><ParentDashboard /></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/parent/children" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PARENT']}><ParentDashboard /></RoleGuard></TenantGuard></AuthGuard>} />
-            <Route path="/m/:tenantSlug/parent/attendance" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PARENT']}><ModuleGuard moduleKey="attendance"><AttendancePage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
+            <Route path="/m/:tenantSlug/parent/attendance" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PARENT']}><ParentDashboard /></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/parent/fees" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PARENT']}><ModuleGuard moduleKey="fees"><FeesPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/parent/results" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PARENT']}><ModuleGuard moduleKey="results"><ParentDashboard /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/parent/notices" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PARENT']}><ModuleGuard moduleKey="notices"><NoticesPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />

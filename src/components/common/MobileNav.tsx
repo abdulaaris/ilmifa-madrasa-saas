@@ -129,9 +129,9 @@ export const MobileNav: React.FC = () => {
             <BookOpen size={18} />
             <span>Children</span>
           </NavLink>
-          <NavLink to={`/m/${tenantSlug}/parent/attendance`} style={itemStyle}>
-            <CalendarCheck size={18} />
-            <span>Attendance</span>
+          <NavLink to={`/m/${tenantSlug}/parent/results`} style={itemStyle}>
+            <Award size={18} />
+            <span>Results</span>
           </NavLink>
           <NavLink to={`/m/${tenantSlug}/parent/fees`} style={itemStyle}>
             <CreditCard size={18} />

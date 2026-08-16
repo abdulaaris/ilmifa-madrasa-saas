@@ -209,12 +209,6 @@ export const Sidebar: React.FC = () => {
               <BookOpen size={18} />
               <span>My Children</span>
             </NavLink>
-            {isModuleActive('attendance') && (
-              <NavLink to={`/m/${tenantSlug}/parent/attendance`} style={linkStyle}>
-                <CalendarCheck size={18} />
-                <span>Attendance</span>
-              </NavLink>
-            )}
             {isModuleActive('fees') && (
               <NavLink to={`/m/${tenantSlug}/parent/fees`} style={linkStyle}>
                 <CreditCard size={18} />
