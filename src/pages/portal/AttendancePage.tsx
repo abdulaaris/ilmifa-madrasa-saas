@@ -8,7 +8,7 @@ import { Student } from '../../types';
 import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
-import { CalendarCheck, Save, Check, X, Clock } from 'lucide-react';
+import { CalendarCheck, Save, Check } from 'lucide-react';
 
 export const AttendancePage: React.FC = () => {
   const { user } = useAuth();
@@ -22,12 +22,23 @@ export const AttendancePage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
 
+  const isParent = user?.role === 'PARENT';
+
   const loadAttendance = async () => {
     if (tenant?.id) {
       setLoading(true);
       const allSt = await studentService.getStudentsByTenant(tenant.id);
-      const classSt = allSt.filter(s => s.classId === selectedClass);
-      setStudents(classSt);
+      
+      // If parent -> filter only their linked children
+      let filtered = allSt;
+      if (isParent && user) {
+        const parentStudentIds = user.studentIds || [];
+        filtered = allSt.filter(s => parentStudentIds.includes(s.id) || s.parentId === user.uid);
+      } else {
+        filtered = allSt.filter(s => s.classId === selectedClass);
+      }
+
+      setStudents(filtered);
 
       // Load existing attendance
       const existing = await attendanceService.getAttendanceForClassAndDate(tenant.id, selectedClass, date);
@@ -36,7 +47,7 @@ export const AttendancePage: React.FC = () => {
       } else {
         // Default all to present
         const initial: Record<string, 'present' | 'absent' | 'late'> = {};
-        classSt.forEach(s => initial[s.id] = 'present');
+        filtered.forEach(s => initial[s.id] = 'present');
         setRecords(initial);
       }
       setLoading(false);
@@ -45,14 +56,15 @@ export const AttendancePage: React.FC = () => {
 
   useEffect(() => {
     loadAttendance();
-  }, [tenant, selectedClass, date]);
+  }, [tenant, selectedClass, date, user]);
 
   const toggleStatus = (studentId: string, status: 'present' | 'absent' | 'late') => {
+    if (isParent) return; // Read-only for parents
     setRecords(prev => ({ ...prev, [studentId]: status }));
   };
 
   const handleSaveAttendance = async () => {
-    if (!tenant?.id || !user) return;
+    if (!tenant?.id || !user || isParent) return;
     setSaving(true);
     await attendanceService.saveAttendance(tenant.id, selectedClass, date, records, user.displayName || user.email);
     setSaving(false);
@@ -71,14 +83,14 @@ export const AttendancePage: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#252525', margin: 0 }}>
-                Daily Class Attendance
+                {isParent ? 'Children Attendance Record' : 'Daily Class Attendance'}
               </h1>
               <p style={{ fontSize: '14px', color: '#666666', marginTop: '4px' }}>
-                Track present, absent, and late students
+                {isParent ? 'Read-only daily attendance status for your registered children' : 'Mark present, absent, and late status for students'}
               </p>
             </div>
 
-            {user?.role !== 'PARENT' && (
+            {!isParent && (
               <button onClick={handleSaveAttendance} disabled={saving} className="btn btn-primary">
                 {savedMsg ? <Check size={18} /> : <Save size={18} />}
                 <span>{savedMsg ? 'Saved Successfully!' : saving ? 'Saving...' : 'Save Attendance'}</span>
@@ -88,12 +100,14 @@ export const AttendancePage: React.FC = () => {
 
           {/* Class & Date Controls */}
           <div className="card" style={{ padding: '16px', marginBottom: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>Select Class</label>
-              <select className="input-field" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
-                {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
+            {!isParent && (
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>Select Class</label>
+                <select className="input-field" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+                  {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            )}
 
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>Attendance Date</label>
@@ -104,10 +118,10 @@ export const AttendancePage: React.FC = () => {
           {/* Students Grid */}
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             {loading ? (
-              <div style={{ padding: '48px', textAlign: 'center', color: '#666' }}>Loading class roster...</div>
+              <div style={{ padding: '48px', textAlign: 'center', color: '#666' }}>Loading attendance records...</div>
             ) : students.length === 0 ? (
               <div style={{ padding: '48px', textAlign: 'center', color: '#666' }}>
-                No students enrolled in <strong>{selectedClass}</strong>. Add students to this class level first.
+                {isParent ? 'No children registered under your account.' : `No students enrolled in ${selectedClass}.`}
               </div>
             ) : (
               <div className="table-container" style={{ border: 'none' }}>
@@ -129,58 +143,79 @@ export const AttendancePage: React.FC = () => {
                           <td style={{ fontWeight: 600, color: '#252525' }}>{s.name}</td>
                           <td>{s.classId}</td>
                           <td>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                              <button
-                                type="button"
-                                onClick={() => toggleStatus(s.id, 'present')}
-                                style={{
-                                  padding: '6px 14px',
-                                  borderRadius: '6px',
-                                  border: `1px solid ${currentStatus === 'present' ? '#059669' : '#D1D5DB'}`,
-                                  backgroundColor: currentStatus === 'present' ? '#ECFDF5' : '#FFF',
-                                  color: currentStatus === 'present' ? '#047857' : '#4B5563',
-                                  fontWeight: currentStatus === 'present' ? 600 : 500,
-                                  fontSize: '12px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Present
-                              </button>
+                            {/* Read-Only Badge for Parents, Interactive Marking Buttons for Staff */}
+                            {isParent ? (
+                              <div>
+                                {currentStatus === 'present' && (
+                                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#059669', backgroundColor: '#ECFDF5', padding: '4px 12px', borderRadius: '6px', border: '1px solid #A7F3D0' }}>
+                                    ✓ Present
+                                  </span>
+                                )}
+                                {currentStatus === 'absent' && (
+                                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#DC2626', backgroundColor: '#FEF2F2', padding: '4px 12px', borderRadius: '6px', border: '1px solid #FCA5A5' }}>
+                                    ✕ Absent
+                                  </span>
+                                )}
+                                {currentStatus === 'late' && (
+                                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#D97706', backgroundColor: '#FFFBEB', padding: '4px 12px', borderRadius: '6px', border: '1px solid #FDE68A' }}>
+                                    ⏰ Late
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleStatus(s.id, 'present')}
+                                  style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '6px',
+                                    border: `1px solid ${currentStatus === 'present' ? '#059669' : '#D1D5DB'}`,
+                                    backgroundColor: currentStatus === 'present' ? '#ECFDF5' : '#FFF',
+                                    color: currentStatus === 'present' ? '#047857' : '#4B5563',
+                                    fontWeight: currentStatus === 'present' ? 600 : 500,
+                                    fontSize: '12px',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Present
+                                </button>
 
-                              <button
-                                type="button"
-                                onClick={() => toggleStatus(s.id, 'absent')}
-                                style={{
-                                  padding: '6px 14px',
-                                  borderRadius: '6px',
-                                  border: `1px solid ${currentStatus === 'absent' ? '#DC2626' : '#D1D5DB'}`,
-                                  backgroundColor: currentStatus === 'absent' ? '#FEF2F2' : '#FFF',
-                                  color: currentStatus === 'absent' ? '#B91C1C' : '#4B5563',
-                                  fontWeight: currentStatus === 'absent' ? 600 : 500,
-                                  fontSize: '12px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Absent
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleStatus(s.id, 'absent')}
+                                  style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '6px',
+                                    border: `1px solid ${currentStatus === 'absent' ? '#DC2626' : '#D1D5DB'}`,
+                                    backgroundColor: currentStatus === 'absent' ? '#FEF2F2' : '#FFF',
+                                    color: currentStatus === 'absent' ? '#B91C1C' : '#4B5563',
+                                    fontWeight: currentStatus === 'absent' ? 600 : 500,
+                                    fontSize: '12px',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Absent
+                                </button>
 
-                              <button
-                                type="button"
-                                onClick={() => toggleStatus(s.id, 'late')}
-                                style={{
-                                  padding: '6px 14px',
-                                  borderRadius: '6px',
-                                  border: `1px solid ${currentStatus === 'late' ? '#D97706' : '#D1D5DB'}`,
-                                  backgroundColor: currentStatus === 'late' ? '#FFFBEB' : '#FFF',
-                                  color: currentStatus === 'late' ? '#B45309' : '#4B5563',
-                                  fontWeight: currentStatus === 'late' ? 600 : 500,
-                                  fontSize: '12px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Late
-                              </button>
-                            </div>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleStatus(s.id, 'late')}
+                                  style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '6px',
+                                    border: `1px solid ${currentStatus === 'late' ? '#D97706' : '#D1D5DB'}`,
+                                    backgroundColor: currentStatus === 'late' ? '#FFFBEB' : '#FFF',
+                                    color: currentStatus === 'late' ? '#B45309' : '#4B5563',
+                                    fontWeight: currentStatus === 'late' ? 600 : 500,
+                                    fontSize: '12px',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Late
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
