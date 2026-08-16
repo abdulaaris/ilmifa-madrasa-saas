@@ -7,7 +7,7 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { CreateMadrasaModal } from '../../components/superadmin/CreateMadrasaModal';
-import { Plus, Search, ExternalLink, Settings2, Check, Edit2, X } from 'lucide-react';
+import { Plus, Search, ExternalLink, Settings2, Check, Edit2, X, Lock, Unlock } from 'lucide-react';
 
 export const CoreMadrasasPage: React.FC = () => {
   const [tenants, setTenants] = useState<MadrasaTenant[]>([]);
@@ -20,8 +20,9 @@ export const CoreMadrasasPage: React.FC = () => {
   const [selectedTenant, setSelectedTenant] = useState<MadrasaTenant | null>(null);
   const [editModules, setEditModules] = useState<MadrasaModule[]>([]);
 
-  // Madrasa Full Edit Details Modal State
+  // Madrasa Full Edit Details Modal State & Safety Locking
   const [editingMadrasa, setEditingMadrasa] = useState<MadrasaTenant | null>(null);
+  const [unlockedFields, setUnlockedFields] = useState<Record<string, boolean>>({});
   const [editName, setEditName] = useState('');
   const [editShortName, setEditShortName] = useState('');
   const [editSlug, setEditSlug] = useState('');
@@ -64,8 +65,13 @@ export const CoreMadrasasPage: React.FC = () => {
     }
   };
 
+  const toggleFieldUnlock = (fieldKey: string) => {
+    setUnlockedFields(prev => ({ ...prev, [fieldKey]: !prev[fieldKey] }));
+  };
+
   const openEditMadrasaModal = (t: MadrasaTenant) => {
     setEditingMadrasa(t);
+    setUnlockedFields({}); // All fields start locked by default for safety!
     setEditName(t.name);
     setEditShortName(t.shortName || '');
     setEditSlug(t.slug || '');
@@ -322,41 +328,139 @@ export const CoreMadrasasPage: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveMadrasaDetails} style={{ display: 'grid', gap: '14px', maxHeight: '75vh', overflowY: 'auto', paddingRight: '4px' }}>
+              {/* MADRASA NAME */}
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Madrasa Name *</label>
-                <input type="text" className="input-field" value={editName} onChange={e => setEditName(e.target.value)} required />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#252525' }}>Madrasa Name *</label>
+                  <button type="button" onClick={() => toggleFieldUnlock('name')} className={`btn btn-xs ${unlockedFields['name'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                    {unlockedFields['name'] ? <Unlock size={12} /> : <Lock size={12} />}
+                    <span>{unlockedFields['name'] ? 'Unlocked' : 'Edit'}</span>
+                  </button>
+                </div>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  value={editName} 
+                  onChange={e => setEditName(e.target.value)} 
+                  disabled={!unlockedFields['name']}
+                  style={{ backgroundColor: unlockedFields['name'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['name'] ? 'text' : 'not-allowed' }}
+                  required 
+                />
               </div>
 
+              {/* SHORT NAME & SLUG */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Short Name</label>
-                  <input type="text" className="input-field" value={editShortName} onChange={e => setEditShortName(e.target.value)} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#252525' }}>Short Name</label>
+                    <button type="button" onClick={() => toggleFieldUnlock('shortName')} className={`btn btn-xs ${unlockedFields['shortName'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                      {unlockedFields['shortName'] ? <Unlock size={12} /> : <Lock size={12} />}
+                      <span>{unlockedFields['shortName'] ? 'Unlocked' : 'Edit'}</span>
+                    </button>
+                  </div>
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    value={editShortName} 
+                    onChange={e => setEditShortName(e.target.value)} 
+                    disabled={!unlockedFields['shortName']}
+                    style={{ backgroundColor: unlockedFields['shortName'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['shortName'] ? 'text' : 'not-allowed' }}
+                  />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Subdomain Slug *</label>
-                  <input type="text" className="input-field" value={editSlug} onChange={e => setEditSlug(e.target.value)} required />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#252525' }}>Subdomain Slug *</label>
+                    <button type="button" onClick={() => toggleFieldUnlock('slug')} className={`btn btn-xs ${unlockedFields['slug'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                      {unlockedFields['slug'] ? <Unlock size={12} /> : <Lock size={12} />}
+                      <span>{unlockedFields['slug'] ? 'Unlocked' : 'Edit'}</span>
+                    </button>
+                  </div>
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    value={editSlug} 
+                    onChange={e => setEditSlug(e.target.value)} 
+                    disabled={!unlockedFields['slug']}
+                    style={{ backgroundColor: unlockedFields['slug'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['slug'] ? 'text' : 'not-allowed' }}
+                    required 
+                  />
                 </div>
               </div>
 
+              {/* PHONE & EMAIL */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Official Phone</label>
-                  <input type="text" className="input-field" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#252525' }}>Official Phone</label>
+                    <button type="button" onClick={() => toggleFieldUnlock('phone')} className={`btn btn-xs ${unlockedFields['phone'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                      {unlockedFields['phone'] ? <Unlock size={12} /> : <Lock size={12} />}
+                      <span>{unlockedFields['phone'] ? 'Unlocked' : 'Edit'}</span>
+                    </button>
+                  </div>
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    value={editPhone} 
+                    onChange={e => setEditPhone(e.target.value)} 
+                    disabled={!unlockedFields['phone']}
+                    style={{ backgroundColor: unlockedFields['phone'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['phone'] ? 'text' : 'not-allowed' }}
+                  />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Official Email</label>
-                  <input type="email" className="input-field" value={editEmail} onChange={e => setEditEmail(e.target.value)} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#252525' }}>Official Email</label>
+                    <button type="button" onClick={() => toggleFieldUnlock('email')} className={`btn btn-xs ${unlockedFields['email'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                      {unlockedFields['email'] ? <Unlock size={12} /> : <Lock size={12} />}
+                      <span>{unlockedFields['email'] ? 'Unlocked' : 'Edit'}</span>
+                    </button>
+                  </div>
+                  <input 
+                    type="email" 
+                    className="input-field" 
+                    value={editEmail} 
+                    onChange={e => setEditEmail(e.target.value)} 
+                    disabled={!unlockedFields['email']}
+                    style={{ backgroundColor: unlockedFields['email'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['email'] ? 'text' : 'not-allowed' }}
+                  />
                 </div>
               </div>
 
+              {/* ADDRESS */}
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Madrasa Address</label>
-                <input type="text" className="input-field" value={editAddress} onChange={e => setEditAddress(e.target.value)} placeholder="City, Location, Address..." />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#252525' }}>Madrasa Address</label>
+                  <button type="button" onClick={() => toggleFieldUnlock('address')} className={`btn btn-xs ${unlockedFields['address'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                    {unlockedFields['address'] ? <Unlock size={12} /> : <Lock size={12} />}
+                    <span>{unlockedFields['address'] ? 'Unlocked' : 'Edit'}</span>
+                  </button>
+                </div>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  value={editAddress} 
+                  onChange={e => setEditAddress(e.target.value)} 
+                  disabled={!unlockedFields['address']}
+                  style={{ backgroundColor: unlockedFields['address'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['address'] ? 'text' : 'not-allowed' }}
+                  placeholder="City, Location, Address..." 
+                />
               </div>
 
+              {/* SUBSCRIPTION STATUS */}
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Madrasa Subscription Status</label>
-                <select className="input-field" value={editStatus} onChange={e => setEditStatus(e.target.value as MadrasaStatus)}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#252525' }}>Madrasa Subscription Status</label>
+                  <button type="button" onClick={() => toggleFieldUnlock('status')} className={`btn btn-xs ${unlockedFields['status'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                    {unlockedFields['status'] ? <Unlock size={12} /> : <Lock size={12} />}
+                    <span>{unlockedFields['status'] ? 'Unlocked' : 'Edit'}</span>
+                  </button>
+                </div>
+                <select 
+                  className="input-field" 
+                  value={editStatus} 
+                  onChange={e => setEditStatus(e.target.value as MadrasaStatus)}
+                  disabled={!unlockedFields['status']}
+                  style={{ backgroundColor: unlockedFields['status'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['status'] ? 'pointer' : 'not-allowed' }}
+                >
                   <option value="active">Active (Paid Plan)</option>
                   <option value="trial">Trial Version (Time Limited)</option>
                   <option value="suspended">Suspended Access</option>
@@ -364,16 +468,25 @@ export const CoreMadrasasPage: React.FC = () => {
                 </select>
               </div>
 
+              {/* TRIAL EXPIRY DATE & TIME */}
               {editStatus === 'trial' && (
                 <div style={{ backgroundColor: '#FFFBEB', border: '1.5px solid #FDE68A', padding: '14px 16px', borderRadius: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#92400E', marginBottom: '6px' }}>
-                    ⏱️ Trial Expiry Date & Time (Auto-Suspend Cutoff) *
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 700, color: '#92400E' }}>
+                      ⏱️ Trial Expiry Date & Time (Auto-Suspend Cutoff) *
+                    </label>
+                    <button type="button" onClick={() => toggleFieldUnlock('trialEndsAt')} className={`btn btn-xs ${unlockedFields['trialEndsAt'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                      {unlockedFields['trialEndsAt'] ? <Unlock size={12} /> : <Lock size={12} />}
+                      <span>{unlockedFields['trialEndsAt'] ? 'Unlocked' : 'Edit'}</span>
+                    </button>
+                  </div>
                   <input 
                     type="datetime-local" 
                     className="input-field" 
                     value={editTrialEndsAt} 
                     onChange={e => setEditTrialEndsAt(e.target.value)} 
+                    disabled={!unlockedFields['trialEndsAt']}
+                    style={{ backgroundColor: unlockedFields['trialEndsAt'] ? '#FFF' : '#FFFDF5', cursor: unlockedFields['trialEndsAt'] ? 'text' : 'not-allowed' }}
                     required={editStatus === 'trial'}
                   />
                   <div style={{ fontSize: '11px', color: '#B45309', marginTop: '6px', lineHeight: 1.4 }}>
@@ -382,6 +495,7 @@ export const CoreMadrasasPage: React.FC = () => {
                 </div>
               )}
 
+              {/* PRINCIPAL CREDENTIALS */}
               <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '14px', marginTop: '4px' }}>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#7B2525', marginBottom: '10px' }}>
                   🕌 Principal Administrative Credentials
@@ -389,25 +503,59 @@ export const CoreMadrasasPage: React.FC = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Principal Name</label>
-                    <input type="text" className="input-field" value={editPrincipalName} onChange={e => setEditPrincipalName(e.target.value)} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: 500, color: '#252525' }}>Principal Name</label>
+                      <button type="button" onClick={() => toggleFieldUnlock('principalName')} className={`btn btn-xs ${unlockedFields['principalName'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                        {unlockedFields['principalName'] ? <Unlock size={12} /> : <Lock size={12} />}
+                        <span>{unlockedFields['principalName'] ? 'Unlocked' : 'Edit'}</span>
+                      </button>
+                    </div>
+                    <input 
+                      type="text" 
+                      className="input-field" 
+                      value={editPrincipalName} 
+                      onChange={e => setEditPrincipalName(e.target.value)} 
+                      disabled={!unlockedFields['principalName']}
+                      style={{ backgroundColor: unlockedFields['principalName'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['principalName'] ? 'text' : 'not-allowed' }}
+                    />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Principal Email</label>
-                    <input type="email" className="input-field" value={editPrincipalEmail} onChange={e => setEditPrincipalEmail(e.target.value)} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: 500, color: '#252525' }}>Principal Email</label>
+                      <button type="button" onClick={() => toggleFieldUnlock('principalEmail')} className={`btn btn-xs ${unlockedFields['principalEmail'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                        {unlockedFields['principalEmail'] ? <Unlock size={12} /> : <Lock size={12} />}
+                        <span>{unlockedFields['principalEmail'] ? 'Unlocked' : 'Edit'}</span>
+                      </button>
+                    </div>
+                    <input 
+                      type="email" 
+                      className="input-field" 
+                      value={editPrincipalEmail} 
+                      onChange={e => setEditPrincipalEmail(e.target.value)} 
+                      disabled={!unlockedFields['principalEmail']}
+                      style={{ backgroundColor: unlockedFields['principalEmail'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['principalEmail'] ? 'text' : 'not-allowed' }}
+                    />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#991B1B', marginBottom: '4px' }}>
-                    Reset Principal Password (Optional)
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#991B1B' }}>
+                      Reset Principal Password (Optional)
+                    </label>
+                    <button type="button" onClick={() => toggleFieldUnlock('principalPassword')} className={`btn btn-xs ${unlockedFields['principalPassword'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                      {unlockedFields['principalPassword'] ? <Unlock size={12} /> : <Lock size={12} />}
+                      <span>{unlockedFields['principalPassword'] ? 'Unlocked' : 'Edit'}</span>
+                    </button>
+                  </div>
                   <input 
                     type="password" 
                     className="input-field" 
                     placeholder="Enter new password to reset Principal login" 
                     value={editPrincipalPassword} 
                     onChange={e => setEditPrincipalPassword(e.target.value)} 
+                    disabled={!unlockedFields['principalPassword']}
+                    style={{ backgroundColor: unlockedFields['principalPassword'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['principalPassword'] ? 'text' : 'not-allowed' }}
                   />
                 </div>
               </div>
