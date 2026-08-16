@@ -204,5 +204,22 @@ export const tenantService = {
       tenant.enabledModules = enabledModules;
       localStorage.setItem(`tenant_${tenantId}`, JSON.stringify(tenant));
     }
+  },
+
+  /**
+   * Update Madrasa Tenant details (Super Admin control)
+   */
+  async updateTenant(tenantId: string, updates: Partial<MadrasaTenant>): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'madrasas', tenantId), updates);
+    } catch (e) {
+      console.warn('Firestore updateTenant failed:', e);
+    }
+
+    const tenant = await this.getTenantById(tenantId);
+    if (tenant) {
+      const merged = { ...tenant, ...updates };
+      localStorage.setItem(`tenant_${tenantId}`, JSON.stringify(merged));
+    }
   }
 };

@@ -39,6 +39,22 @@ export const studentService = {
     return JSON.parse(localStorage.getItem(`students_${tenantId}`) || '[]');
   },
 
+  async updateStudent(tenantId: string, studentId: string, updates: Partial<Student>): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'madrasas', tenantId, 'students', studentId), updates);
+    } catch (e) {
+      console.warn('Firestore updateStudent fallback:', e);
+    }
+
+    const localKey = `students_${tenantId}`;
+    const existing: Student[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const idx = existing.findIndex(s => s.id === studentId);
+    if (idx >= 0) {
+      existing[idx] = { ...existing[idx], ...updates };
+      localStorage.setItem(localKey, JSON.stringify(existing));
+    }
+  },
+
   async deleteStudent(tenantId: string, studentId: string): Promise<void> {
     try {
       await deleteDoc(doc(db, 'madrasas', tenantId, 'students', studentId));

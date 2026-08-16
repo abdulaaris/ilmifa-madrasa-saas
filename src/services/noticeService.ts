@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Notice, UserRole } from '../types';
 
@@ -42,5 +42,34 @@ export const noticeService = {
       if (role === 'PRINCIPAL') return true;
       return false;
     });
+  },
+
+  async updateNotice(tenantId: string, noticeId: string, updates: Partial<Notice>): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'madrasas', tenantId, 'notices', noticeId), updates);
+    } catch (e) {
+      console.warn('Firestore updateNotice fallback:', e);
+    }
+
+    const localKey = `notices_${tenantId}`;
+    const existing: Notice[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const idx = existing.findIndex(n => n.id === noticeId);
+    if (idx >= 0) {
+      existing[idx] = { ...existing[idx], ...updates };
+      localStorage.setItem(localKey, JSON.stringify(existing));
+    }
+  },
+
+  async deleteNotice(tenantId: string, noticeId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'madrasas', tenantId, 'notices', noticeId));
+    } catch (e) {
+      console.warn('Firestore deleteNotice fallback:', e);
+    }
+
+    const localKey = `notices_${tenantId}`;
+    const existing: Notice[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const filtered = existing.filter(n => n.id !== noticeId);
+    localStorage.setItem(localKey, JSON.stringify(filtered));
   }
 };

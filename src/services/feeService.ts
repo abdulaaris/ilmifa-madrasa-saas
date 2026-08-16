@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { FeeRecord } from '../types';
 
@@ -49,5 +49,27 @@ export const feeService = {
   async getFeesByStudent(tenantId: string, studentId: string): Promise<FeeRecord[]> {
     const all = await this.getFeesByTenant(tenantId);
     return all.filter(f => f.studentId === studentId);
+  },
+
+  async updateFeeRecord(tenantId: string, feeId: string, updates: Partial<FeeRecord>): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'madrasas', tenantId, 'fees', feeId), updates);
+    } catch (e) {
+      console.warn('Firestore updateFeeRecord fallback:', e);
+    }
+
+    const localKey = `fees_${tenantId}`;
+    const existing: FeeRecord[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const idx = existing.findIndex(f => f.id === feeId);
+    if (idx >= 0) {
+      const merged = { ...existing[idx], ...updates };
+      merged.balance = merged.feeAmount - merged.paidAmount;
+      if (merged.balance <= 0) merged.status = 'paid';
+      else if (merged.paidAmount > 0) merged.status = 'partial';
+      else merged.status = 'pending';
+
+      existing[idx] = merged;
+      localStorage.setItem(localKey, JSON.stringify(existing));
+    }
   }
 };

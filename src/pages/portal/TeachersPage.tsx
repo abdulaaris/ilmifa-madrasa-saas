@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { teacherService } from '../../services/teacherService';
 import { CLASS_OPTIONS } from '../../config/constants';
@@ -7,16 +8,21 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { UserCheck, Plus, Search, X } from 'lucide-react';
+import { Plus, Search, X, Edit2 } from 'lucide-react';
 
 export const TeachersPage: React.FC = () => {
+  const { user } = useAuth();
   const { tenant } = useTenant();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Security Check: Only Super Admin and Principal can Edit/Create
+  const canEdit = user?.role === 'SUPER_ADMIN' || user?.role === 'PRINCIPAL';
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
@@ -39,14 +45,34 @@ export const TeachersPage: React.FC = () => {
     loadData();
   }, [tenant]);
 
-  const handleCreateTeacher = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingTeacher(null);
+    setName('');
+    setEmail('');
+    setPass('');
+    setMobile('');
+    setSelectedClasses([CLASS_OPTIONS[0]]);
+    setSubjectsStr('Arabic, Tajweed, Quran');
+    setError(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (t: Teacher) => {
+    setEditingTeacher(t);
+    setName(t.name);
+    setEmail(t.email);
+    setPass(''); // Leave password blank unless updating
+    setMobile(t.mobile || '');
+    setSelectedClasses(t.assignedClasses || [CLASS_OPTIONS[0]]);
+    setSubjectsStr(t.subjects?.join(', ') || '');
+    setError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tenant?.id || !name || !email || !pass) {
-      setError('Please fill in Name, Email and Password.');
-      return;
-    }
-    if (pass.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (!tenant?.id || !name || (!editingTeacher && (!email || !pass))) {
+      setError('Please fill in required fields.');
       return;
     }
 
@@ -55,24 +81,32 @@ export const TeachersPage: React.FC = () => {
 
     try {
       const subjects = subjectsStr.split(',').map(s => s.trim()).filter(Boolean);
-      await teacherService.createTeacher(tenant.id, {
-        name,
-        email,
-        pass,
-        mobile,
-        assignedClasses: selectedClasses,
-        subjects
-      });
+
+      if (editingTeacher) {
+        // Edit existing teacher profile
+        await teacherService.updateTeacher(tenant.id, editingTeacher.id, {
+          name,
+          mobile,
+          assignedClasses: selectedClasses,
+          subjects
+        });
+      } else {
+        // Create new teacher account
+        await teacherService.createTeacher(tenant.id, {
+          name,
+          email,
+          pass,
+          mobile,
+          assignedClasses: selectedClasses,
+          subjects
+        });
+      }
 
       setCreating(false);
       setIsModalOpen(false);
-      setName('');
-      setEmail('');
-      setPass('');
-      setMobile('');
       await loadData();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create teacher account';
+      const msg = err instanceof Error ? err.message : 'Failed to save teacher details';
       setError(msg);
       setCreating(false);
     }
@@ -101,10 +135,12 @@ export const TeachersPage: React.FC = () => {
               </p>
             </div>
 
-            <button onClick={() => setIsModalOpen(true)} className="btn btn-primary">
-              <Plus size={18} />
-              <span>Create Teacher Account</span>
-            </button>
+            {canEdit && (
+              <button onClick={openCreateModal} className="btn btn-primary">
+                <Plus size={18} />
+                <span>Create Teacher Account</span>
+              </button>
+            )}
           </div>
 
           {/* Search Bar */}
@@ -129,8 +165,8 @@ export const TeachersPage: React.FC = () => {
               icon="👨‍🏫"
               title="No Teachers Registered"
               description="Provision your first teacher account to assign classes and enable attendance tracking."
-              actionLabel="+ Create Teacher Account"
-              onAction={() => setIsModalOpen(true)}
+              actionLabel={canEdit ? "+ Create Teacher Account" : undefined}
+              onAction={canEdit ? openCreateModal : undefined}
             />
           ) : (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -144,6 +180,7 @@ export const TeachersPage: React.FC = () => {
                       <th>Assigned Classes</th>
                       <th>Subjects</th>
                       <th>Account Status</th>
+                      {canEdit && <th>Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -165,6 +202,14 @@ export const TeachersPage: React.FC = () => {
                         <td>
                           <span className="badge badge-active">Active Auth</span>
                         </td>
+                        {canEdit && (
+                          <td>
+                            <button onClick={() => openEditModal(t)} className="btn btn-outline btn-sm">
+                              <Edit2 size={14} />
+                              <span>Edit</span>
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -175,13 +220,13 @@ export const TeachersPage: React.FC = () => {
         </main>
       </div>
 
-      {/* Add Teacher Modal */}
-      {isModalOpen && (
+      {/* Add / Edit Teacher Modal */}
+      {isModalOpen && canEdit && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '520px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
-                Provision Teacher Auth Account
+                {editingTeacher ? 'Edit Teacher Details' : 'Provision Teacher Auth Account'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="btn btn-ghost btn-sm">
                 <X size={20} />
@@ -194,22 +239,24 @@ export const TeachersPage: React.FC = () => {
               </div>
             )}
 
-            <form onSubmit={handleCreateTeacher} style={{ display: 'grid', gap: '14px' }}>
+            <form onSubmit={handleSaveTeacher} style={{ display: 'grid', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Full Name *</label>
                 <input type="text" className="input-field" placeholder="Maulana Ibrahim" value={name} onChange={e => setName(e.target.value)} required />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Login Email *</label>
-                  <input type="email" className="input-field" placeholder="teacher@madrasa.org" value={email} onChange={e => setEmail(e.target.value)} required />
+              {!editingTeacher && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Login Email *</label>
+                    <input type="email" className="input-field" placeholder="teacher@madrasa.org" value={email} onChange={e => setEmail(e.target.value)} required />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Initial Password *</label>
+                    <input type="password" className="input-field" placeholder="••••••••" value={pass} onChange={e => setPass(e.target.value)} required />
+                  </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Initial Password *</label>
-                  <input type="password" className="input-field" placeholder="••••••••" value={pass} onChange={e => setPass(e.target.value)} required />
-                </div>
-              </div>
+              )}
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Mobile Phone</label>
@@ -231,7 +278,7 @@ export const TeachersPage: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
                 <button type="submit" disabled={creating} className="btn btn-primary">
-                  {creating ? 'Creating Account...' : 'Provision Account'}
+                  {creating ? 'Saving...' : editingTeacher ? 'Update Teacher' : 'Provision Account'}
                 </button>
               </div>
             </form>

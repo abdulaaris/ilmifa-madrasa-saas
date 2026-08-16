@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Parent } from '../types';
 import { userService } from './userService';
@@ -8,7 +8,6 @@ export const parentService = {
     tenantId: string, 
     data: { name: string; email: string; pass: string; mobile: string; relationship: string; studentIds: string[] }
   ): Promise<Parent> {
-    // 1. Create Auth Account safely
     const userProfile = await userService.createPrivilegedUser(
       data.email,
       data.pass,
@@ -57,5 +56,21 @@ export const parentService = {
     }
 
     return JSON.parse(localStorage.getItem(`parents_${tenantId}`) || '[]');
+  },
+
+  async updateParent(tenantId: string, parentId: string, updates: Partial<Parent>): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'madrasas', tenantId, 'parents', parentId), updates);
+    } catch (e) {
+      console.warn('Firestore updateParent fallback:', e);
+    }
+
+    const localKey = `parents_${tenantId}`;
+    const existing: Parent[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const idx = existing.findIndex(p => p.id === parentId);
+    if (idx >= 0) {
+      existing[idx] = { ...existing[idx], ...updates };
+      localStorage.setItem(localKey, JSON.stringify(existing));
+    }
   }
 };

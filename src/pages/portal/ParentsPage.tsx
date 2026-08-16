@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { parentService } from '../../services/parentService';
 import { studentService } from '../../services/studentService';
@@ -7,17 +8,22 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { HeartHandshake, Plus, Search, X } from 'lucide-react';
+import { Plus, Search, X, Edit2 } from 'lucide-react';
 
 export const ParentsPage: React.FC = () => {
+  const { user } = useAuth();
   const { tenant } = useTenant();
   const [parents, setParents] = useState<Parent[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Security Check: Only Super Admin and Principal can Edit/Create
+  const canEdit = user?.role === 'SUPER_ADMIN' || user?.role === 'PRINCIPAL';
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingParent, setEditingParent] = useState<Parent | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
@@ -44,14 +50,34 @@ export const ParentsPage: React.FC = () => {
     loadData();
   }, [tenant]);
 
-  const handleCreateParent = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingParent(null);
+    setName('');
+    setEmail('');
+    setPass('');
+    setMobile('');
+    setRelationship('Father');
+    setSelectedStudentIds([]);
+    setError(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (p: Parent) => {
+    setEditingParent(p);
+    setName(p.name);
+    setEmail(p.email);
+    setPass('');
+    setMobile(p.mobile || '');
+    setRelationship(p.relationship || 'Father');
+    setSelectedStudentIds(p.studentIds || []);
+    setError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveParent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tenant?.id || !name || !email || !pass) {
-      setError('Please fill in Parent Name, Email, and Password.');
-      return;
-    }
-    if (pass.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (!tenant?.id || !name || (!editingParent && (!email || !pass))) {
+      setError('Please fill in required fields.');
       return;
     }
 
@@ -59,25 +85,31 @@ export const ParentsPage: React.FC = () => {
     setError(null);
 
     try {
-      await parentService.createParent(tenant.id, {
-        name,
-        email,
-        pass,
-        mobile,
-        relationship,
-        studentIds: selectedStudentIds
-      });
+      if (editingParent) {
+        // Edit existing parent profile
+        await parentService.updateParent(tenant.id, editingParent.id, {
+          name,
+          mobile,
+          relationship,
+          studentIds: selectedStudentIds
+        });
+      } else {
+        // Create new parent account
+        await parentService.createParent(tenant.id, {
+          name,
+          email,
+          pass,
+          mobile,
+          relationship,
+          studentIds: selectedStudentIds
+        });
+      }
 
       setCreating(false);
       setIsModalOpen(false);
-      setName('');
-      setEmail('');
-      setPass('');
-      setMobile('');
-      setSelectedStudentIds([]);
       await loadData();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create parent account';
+      const msg = err instanceof Error ? err.message : 'Failed to save parent details';
       setError(msg);
       setCreating(false);
     }
@@ -114,10 +146,12 @@ export const ParentsPage: React.FC = () => {
               </p>
             </div>
 
-            <button onClick={() => setIsModalOpen(true)} className="btn btn-primary">
-              <Plus size={18} />
-              <span>Create Parent Account</span>
-            </button>
+            {canEdit && (
+              <button onClick={openCreateModal} className="btn btn-primary">
+                <Plus size={18} />
+                <span>Create Parent Account</span>
+              </button>
+            )}
           </div>
 
           {/* Search */}
@@ -142,8 +176,8 @@ export const ParentsPage: React.FC = () => {
               icon="👨‍👩‍👧‍👦"
               title="No Parent Accounts Found"
               description="Provision parent authentication accounts to allow parents to view attendance, fees, and results."
-              actionLabel="+ Create Parent Account"
-              onAction={() => setIsModalOpen(true)}
+              actionLabel={canEdit ? "+ Create Parent Account" : undefined}
+              onAction={canEdit ? openCreateModal : undefined}
             />
           ) : (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -156,6 +190,7 @@ export const ParentsPage: React.FC = () => {
                       <th>Relationship</th>
                       <th>Linked Children</th>
                       <th>Status</th>
+                      {canEdit && <th>Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -175,6 +210,14 @@ export const ParentsPage: React.FC = () => {
                         <td>
                           <span className="badge badge-active">Active Auth</span>
                         </td>
+                        {canEdit && (
+                          <td>
+                            <button onClick={() => openEditModal(p)} className="btn btn-outline btn-sm">
+                              <Edit2 size={14} />
+                              <span>Edit</span>
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -185,13 +228,13 @@ export const ParentsPage: React.FC = () => {
         </main>
       </div>
 
-      {/* Modal */}
-      {isModalOpen && (
+      {/* Add / Edit Parent Modal */}
+      {isModalOpen && canEdit && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '520px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
-                Provision Parent Auth Account
+                {editingParent ? 'Edit Parent Details' : 'Provision Parent Auth Account'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="btn btn-ghost btn-sm">
                 <X size={20} />
@@ -204,22 +247,24 @@ export const ParentsPage: React.FC = () => {
               </div>
             )}
 
-            <form onSubmit={handleCreateParent} style={{ display: 'grid', gap: '14px' }}>
+            <form onSubmit={handleSaveParent} style={{ display: 'grid', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Parent Full Name *</label>
                 <input type="text" className="input-field" placeholder="Syed Ahmed" value={name} onChange={e => setName(e.target.value)} required />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Parent Email *</label>
-                  <input type="email" className="input-field" placeholder="parent@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
+              {!editingParent && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Parent Email *</label>
+                    <input type="email" className="input-field" placeholder="parent@gmail.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Initial Password *</label>
+                    <input type="password" className="input-field" placeholder="••••••••" value={pass} onChange={e => setPass(e.target.value)} required />
+                  </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Initial Password *</label>
-                  <input type="password" className="input-field" placeholder="••••••••" value={pass} onChange={e => setPass(e.target.value)} required />
-                </div>
-              </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
@@ -259,7 +304,7 @@ export const ParentsPage: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
                 <button type="submit" disabled={creating} className="btn btn-primary">
-                  {creating ? 'Creating Account...' : 'Provision Parent Account'}
+                  {creating ? 'Saving...' : editingParent ? 'Update Parent' : 'Provision Parent Account'}
                 </button>
               </div>
             </form>

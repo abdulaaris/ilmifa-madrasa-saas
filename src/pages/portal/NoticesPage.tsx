@@ -7,7 +7,7 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Bell, Plus, X } from 'lucide-react';
+import { Plus, X, Edit2, Trash2 } from 'lucide-react';
 
 export const NoticesPage: React.FC = () => {
   const { user } = useAuth();
@@ -16,8 +16,12 @@ export const NoticesPage: React.FC = () => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Security Check: Only Super Admin and Principal can Edit/Create/Delete
+  const canEdit = user?.role === 'SUPER_ADMIN' || user?.role === 'PRINCIPAL';
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [targetAudience, setTargetAudience] = useState<'all' | 'teachers' | 'parents'>('all');
@@ -36,24 +40,55 @@ export const NoticesPage: React.FC = () => {
     loadData();
   }, [tenant, user]);
 
-  const handleCreateNotice = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingNotice(null);
+    setTitle('');
+    setContent('');
+    setTargetAudience('all');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (n: Notice) => {
+    setEditingNotice(n);
+    setTitle(n.title);
+    setContent(n.content);
+    setTargetAudience(n.targetAudience);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant?.id || !user || !title || !content) return;
     setSaving(true);
 
-    await noticeService.createNotice(tenant.id, {
-      title,
-      content,
-      targetAudience,
-      createdBy: user.uid,
-      createdByName: user.displayName || user.email
-    });
+    if (editingNotice) {
+      // Edit existing notice
+      await noticeService.updateNotice(tenant.id, editingNotice.id, {
+        title,
+        content,
+        targetAudience
+      });
+    } else {
+      // Create new notice
+      await noticeService.createNotice(tenant.id, {
+        title,
+        content,
+        targetAudience,
+        createdBy: user.uid,
+        createdByName: user.displayName || user.email
+      });
+    }
 
     setSaving(false);
     setIsModalOpen(false);
-    setTitle('');
-    setContent('');
     await loadData();
+  };
+
+  const handleDelete = async (noticeId: string) => {
+    if (tenant?.id && window.confirm('Are you sure you want to delete this notice?')) {
+      await noticeService.deleteNotice(tenant.id, noticeId);
+      await loadData();
+    }
   };
 
   return (
@@ -74,8 +109,8 @@ export const NoticesPage: React.FC = () => {
               </p>
             </div>
 
-            {user?.role === 'PRINCIPAL' && (
-              <button onClick={() => setIsModalOpen(true)} className="btn btn-primary">
+            {canEdit && (
+              <button onClick={openCreateModal} className="btn btn-primary">
                 <Plus size={18} />
                 <span>Post New Notice</span>
               </button>
@@ -89,8 +124,8 @@ export const NoticesPage: React.FC = () => {
               icon="📢"
               title="No Notices Posted"
               description="No announcements or circulars posted on the notice board yet."
-              actionLabel={user?.role === 'PRINCIPAL' ? "+ Post Notice" : undefined}
-              onAction={user?.role === 'PRINCIPAL' ? () => setIsModalOpen(true) : undefined}
+              actionLabel={canEdit ? "+ Post Notice" : undefined}
+              onAction={canEdit ? openCreateModal : undefined}
             />
           ) : (
             <div style={{ display: 'grid', gap: '16px' }}>
@@ -103,9 +138,22 @@ export const NoticesPage: React.FC = () => {
                         Posted by {n.createdByName} • {new Date(n.createdAt).toLocaleDateString()}
                       </div>
                     </div>
-                    <span className="badge badge-trial" style={{ textTransform: 'capitalize' }}>
-                      Audience: {n.targetAudience}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="badge badge-trial" style={{ textTransform: 'capitalize' }}>
+                        Audience: {n.targetAudience}
+                      </span>
+                      {canEdit && (
+                        <>
+                          <button onClick={() => openEditModal(n)} className="btn btn-outline btn-sm" title="Edit Notice">
+                            <Edit2 size={14} />
+                            <span>Edit</span>
+                          </button>
+                          <button onClick={() => handleDelete(n.id)} className="btn btn-ghost btn-sm" style={{ color: '#DC2626' }} title="Delete Notice">
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <p style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-line' }}>
                     {n.content}
@@ -117,20 +165,20 @@ export const NoticesPage: React.FC = () => {
         </main>
       </div>
 
-      {/* Post Notice Modal */}
-      {isModalOpen && (
+      {/* Post / Edit Notice Modal */}
+      {isModalOpen && canEdit && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '520px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
-                Post Official Notice
+                {editingNotice ? 'Edit Notice' : 'Post Official Notice'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="btn btn-ghost btn-sm">
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateNotice} style={{ display: 'grid', gap: '14px' }}>
+            <form onSubmit={handleSaveNotice} style={{ display: 'grid', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Notice Title *</label>
                 <input type="text" className="input-field" placeholder="e.g. Eid-ul-Fitr Holiday Announcement" value={title} onChange={e => setTitle(e.target.value)} required />
@@ -153,7 +201,7 @@ export const NoticesPage: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
                 <button type="submit" disabled={saving} className="btn btn-primary">
-                  {saving ? 'Posting...' : 'Post Notice'}
+                  {saving ? 'Saving...' : editingNotice ? 'Update Notice' : 'Post Notice'}
                 </button>
               </div>
             </form>

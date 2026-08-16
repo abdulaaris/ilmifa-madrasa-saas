@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { studentService } from '../../services/studentService';
 import { CLASS_OPTIONS } from '../../config/constants';
@@ -7,21 +8,24 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { GraduationCap, Plus, Trash2, Search, X } from 'lucide-react';
+import { Plus, Trash2, Search, X, Edit2 } from 'lucide-react';
 
 export const StudentsPage: React.FC = () => {
+  const { user } = useAuth();
   const { tenant } = useTenant();
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
+  // Security Check: Only Super Admin and Principal can Edit/Create/Delete
+  const canEdit = user?.role === 'SUPER_ADMIN' || user?.role === 'PRINCIPAL';
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [name, setName] = useState('');
   const [studentCode, setStudentCode] = useState('');
-  const [dob, setDob] = useState('2015-05-15');
-  const [gender, setGender] = useState<'male' | 'female'>('male');
   const [selectedClass, setSelectedClass] = useState(CLASS_OPTIONS[0]);
   const [section, setSection] = useState('A');
   const [parentName, setParentName] = useState('');
@@ -41,32 +45,62 @@ export const StudentsPage: React.FC = () => {
     loadData();
   }, [tenant]);
 
-  const handleCreateStudent = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingStudent(null);
+    setName('');
+    setStudentCode('');
+    setSelectedClass(CLASS_OPTIONS[0]);
+    setSection('A');
+    setParentName('');
+    setParentPhone('');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (st: Student) => {
+    setEditingStudent(st);
+    setName(st.name);
+    setStudentCode(st.studentCode);
+    setSelectedClass(st.classId);
+    setSection(st.section || 'A');
+    setParentName(st.parentName || '');
+    setParentPhone(st.parentPhone || '');
+    setIsModalOpen(true);
+  };
+
+  const handleSaveStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant?.id || !name) return;
     setCreating(true);
 
-    const generatedCode = studentCode || `STU-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    await studentService.createStudent(tenant.id, {
-      name,
-      studentCode: generatedCode,
-      dob,
-      gender,
-      classId: selectedClass,
-      section,
-      parentName,
-      parentPhone,
-      admissionDate: new Date().toISOString().split('T')[0],
-      status: 'active'
-    });
+    if (editingStudent) {
+      // Edit existing student
+      await studentService.updateStudent(tenant.id, editingStudent.id, {
+        name,
+        studentCode,
+        classId: selectedClass,
+        section,
+        parentName,
+        parentPhone
+      });
+    } else {
+      // Create new student
+      const generatedCode = studentCode || `STU-${Math.floor(1000 + Math.random() * 9000)}`;
+      await studentService.createStudent(tenant.id, {
+        name,
+        studentCode: generatedCode,
+        dob: '2015-05-15',
+        gender: 'male',
+        classId: selectedClass,
+        section,
+        parentName,
+        parentPhone,
+        admissionDate: new Date().toISOString().split('T')[0],
+        status: 'active'
+      });
+    }
 
     setCreating(false);
     setIsModalOpen(false);
-    setName('');
-    setStudentCode('');
-    setParentName('');
-    setParentPhone('');
     await loadData();
   };
 
@@ -103,10 +137,12 @@ export const StudentsPage: React.FC = () => {
               </p>
             </div>
 
-            <button onClick={() => setIsModalOpen(true)} className="btn btn-primary">
-              <Plus size={18} />
-              <span>Add New Student</span>
-            </button>
+            {canEdit && (
+              <button onClick={openCreateModal} className="btn btn-primary">
+                <Plus size={18} />
+                <span>Add New Student</span>
+              </button>
+            )}
           </div>
 
           {/* Search & Filter Bar */}
@@ -131,7 +167,7 @@ export const StudentsPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Students Table or Empty State */}
+          {/* Students Table */}
           {loading ? (
             <div style={{ padding: '48px', textAlign: 'center', color: '#666' }}>Loading students list...</div>
           ) : filteredStudents.length === 0 ? (
@@ -139,8 +175,8 @@ export const StudentsPage: React.FC = () => {
               icon="🎓"
               title="No Students Found"
               description="Add your first student to begin managing attendance, fees, and academic report cards."
-              actionLabel="+ Add Student"
-              onAction={() => setIsModalOpen(true)}
+              actionLabel={canEdit ? "+ Add Student" : undefined}
+              onAction={canEdit ? openCreateModal : undefined}
             />
           ) : (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -154,7 +190,7 @@ export const StudentsPage: React.FC = () => {
                       <th>Parent Info</th>
                       <th>Admission Date</th>
                       <th>Status</th>
-                      <th>Actions</th>
+                      {canEdit && <th>Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -171,11 +207,19 @@ export const StudentsPage: React.FC = () => {
                         <td>
                           <span className="badge badge-active">Active</span>
                         </td>
-                        <td>
-                          <button onClick={() => handleDelete(s.id)} className="btn btn-ghost btn-sm" style={{ color: '#DC2626' }}>
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
+                        {canEdit && (
+                          <td>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button onClick={() => openEditModal(s)} className="btn btn-outline btn-sm" title="Edit Student">
+                                <Edit2 size={14} />
+                                <span>Edit</span>
+                              </button>
+                              <button onClick={() => handleDelete(s.id)} className="btn btn-ghost btn-sm" style={{ color: '#DC2626' }} title="Delete Student">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -186,20 +230,20 @@ export const StudentsPage: React.FC = () => {
         </main>
       </div>
 
-      {/* Add Student Modal */}
-      {isModalOpen && (
+      {/* Add / Edit Student Modal */}
+      {isModalOpen && canEdit && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '520px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
-                Add New Student
+                {editingStudent ? 'Edit Student Details' : 'Add New Student'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="btn btn-ghost btn-sm">
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateStudent} style={{ display: 'grid', gap: '14px' }}>
+            <form onSubmit={handleSaveStudent} style={{ display: 'grid', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Student Name *</label>
                 <input type="text" className="input-field" placeholder="e.g. Aisha Rahman" value={name} onChange={e => setName(e.target.value)} required />
@@ -207,15 +251,20 @@ export const StudentsPage: React.FC = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Class Level *</label>
-                  <select className="input-field" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
-                    {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Student Code</label>
+                  <input type="text" className="input-field" placeholder="Auto-generated if empty" value={studentCode} onChange={e => setStudentCode(e.target.value)} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Section</label>
                   <input type="text" className="input-field" value={section} onChange={e => setSection(e.target.value)} />
                 </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Class Level *</label>
+                <select className="input-field" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+                  {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -232,7 +281,7 @@ export const StudentsPage: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
                 <button type="submit" disabled={creating} className="btn btn-primary">
-                  {creating ? 'Saving Student...' : 'Create Student'}
+                  {creating ? 'Saving...' : editingStudent ? 'Update Student' : 'Create Student'}
                 </button>
               </div>
             </form>

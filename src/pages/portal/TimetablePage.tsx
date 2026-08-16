@@ -7,7 +7,7 @@ import { TimetableSlot } from '../../types';
 import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
-import { Clock, Plus, X } from 'lucide-react';
+import { Clock, Plus, X, Edit2, Trash2 } from 'lucide-react';
 
 export const TimetablePage: React.FC = () => {
   const { user } = useAuth();
@@ -17,8 +17,12 @@ export const TimetablePage: React.FC = () => {
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Security Check: Only Super Admin and Principal can Edit/Create/Delete
+  const canEdit = user?.role === 'SUPER_ADMIN' || user?.role === 'PRINCIPAL';
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSlot, setEditingSlot] = useState<TimetableSlot | null>(null);
   const [dayOfWeek, setDayOfWeek] = useState<TimetableSlot['dayOfWeek']>('Monday');
   const [startTime, setStartTime] = useState('08:00 AM');
   const [endTime, setEndTime] = useState('09:00 AM');
@@ -39,23 +43,63 @@ export const TimetablePage: React.FC = () => {
     loadData();
   }, [tenant, selectedClass]);
 
+  const openCreateModal = () => {
+    setEditingSlot(null);
+    setDayOfWeek('Monday');
+    setStartTime('08:00 AM');
+    setEndTime('09:00 AM');
+    setSubject('Quran Recitation');
+    setTeacherName('Maulana Ibrahim');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (slot: TimetableSlot) => {
+    setEditingSlot(slot);
+    setDayOfWeek(slot.dayOfWeek);
+    setStartTime(slot.startTime);
+    setEndTime(slot.endTime);
+    setSubject(slot.subject);
+    setTeacherName(slot.teacherName);
+    setIsModalOpen(true);
+  };
+
   const handleSaveSlot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant?.id) return;
     setSaving(true);
 
-    await timetableService.saveSlot(tenant.id, {
-      classId: selectedClass,
-      dayOfWeek,
-      startTime,
-      endTime,
-      subject,
-      teacherName
-    });
+    if (editingSlot) {
+      // Update existing slot
+      await timetableService.updateSlot(tenant.id, editingSlot.id, {
+        classId: selectedClass,
+        dayOfWeek,
+        startTime,
+        endTime,
+        subject,
+        teacherName
+      });
+    } else {
+      // Save new slot
+      await timetableService.saveSlot(tenant.id, {
+        classId: selectedClass,
+        dayOfWeek,
+        startTime,
+        endTime,
+        subject,
+        teacherName
+      });
+    }
 
     setSaving(false);
     setIsModalOpen(false);
     await loadData();
+  };
+
+  const handleDeleteSlot = async (slotId: string) => {
+    if (tenant?.id && window.confirm('Delete this timetable slot?')) {
+      await timetableService.deleteSlot(tenant.id, slotId);
+      await loadData();
+    }
   };
 
   const days: TimetableSlot['dayOfWeek'][] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -78,8 +122,8 @@ export const TimetablePage: React.FC = () => {
               </p>
             </div>
 
-            {user?.role === 'PRINCIPAL' && (
-              <button onClick={() => setIsModalOpen(true)} className="btn btn-primary">
+            {canEdit && (
+              <button onClick={openCreateModal} className="btn btn-primary">
                 <Plus size={18} />
                 <span>Add Timetable Slot</span>
               </button>
@@ -109,13 +153,25 @@ export const TimetablePage: React.FC = () => {
                   ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
                       {daySlots.map(slot => (
-                        <div key={slot.id} style={{ padding: '10px 12px', backgroundColor: '#FAF9F7', border: '1px solid #E2DDD5', borderRadius: '8px' }}>
-                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#2563EB', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Clock size={12} />
-                            <span>{slot.startTime} - {slot.endTime}</span>
+                        <div key={slot.id} style={{ padding: '10px 12px', backgroundColor: '#FAF9F7', border: '1px solid #E2DDD5', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#2563EB', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Clock size={12} />
+                              <span>{slot.startTime} - {slot.endTime}</span>
+                            </div>
+                            <div style={{ fontSize: '14px', fontWeight: 600, color: '#252525', marginTop: '2px' }}>{slot.subject}</div>
+                            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>Teacher: {slot.teacherName}</div>
                           </div>
-                          <div style={{ fontSize: '14px', fontWeight: 600, color: '#252525', marginTop: '2px' }}>{slot.subject}</div>
-                          <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>Teacher: {slot.teacherName}</div>
+                          {canEdit && (
+                            <div style={{ display: 'flex', gap: '2px' }}>
+                              <button onClick={() => openEditModal(slot)} className="btn btn-ghost btn-sm" style={{ padding: '2px' }} title="Edit Slot">
+                                <Edit2 size={12} />
+                              </button>
+                              <button onClick={() => handleDeleteSlot(slot.id)} className="btn btn-ghost btn-sm" style={{ padding: '2px', color: '#DC2626' }} title="Delete Slot">
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -127,13 +183,13 @@ export const TimetablePage: React.FC = () => {
         </main>
       </div>
 
-      {/* Add Slot Modal */}
-      {isModalOpen && (
+      {/* Add / Edit Slot Modal */}
+      {isModalOpen && canEdit && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '480px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
-                Add Timetable Slot
+                {editingSlot ? 'Edit Timetable Slot' : 'Add Timetable Slot'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="btn btn-ghost btn-sm">
                 <X size={20} />
@@ -172,7 +228,7 @@ export const TimetablePage: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
                 <button type="submit" disabled={saving} className="btn btn-primary">
-                  {saving ? 'Saving...' : 'Add Slot'}
+                  {saving ? 'Saving...' : editingSlot ? 'Update Slot' : 'Add Slot'}
                 </button>
               </div>
             </form>

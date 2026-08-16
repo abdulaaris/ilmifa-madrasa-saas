@@ -9,7 +9,7 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Award, Plus, X, Check } from 'lucide-react';
+import { Award, Plus, X, Edit2 } from 'lucide-react';
 
 export const ExamsPage: React.FC = () => {
   const { user } = useAuth();
@@ -19,8 +19,12 @@ export const ExamsPage: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Create Exam Modal
+  // Security Check: Super Admin, Principal, and Teacher can Edit/Schedule Exams
+  const canEdit = user?.role === 'SUPER_ADMIN' || user?.role === 'PRINCIPAL' || user?.role === 'TEACHER';
+
+  // Create / Edit Exam Modal
   const [isExamModalOpen, setIsExamModalOpen] = useState(false);
+  const [editingExam, setEditingExam] = useState<ExamRecord | null>(null);
   const [title, setTitle] = useState('Mid-Term Examination 2026');
   const [selectedClass, setSelectedClass] = useState(CLASS_OPTIONS[0]);
   const [subject, setSubject] = useState('Tajweed & Quran');
@@ -56,18 +60,50 @@ export const ExamsPage: React.FC = () => {
     loadData();
   }, [tenant]);
 
-  const handleCreateExam = async (e: React.FormEvent) => {
+  const openCreateExamModal = () => {
+    setEditingExam(null);
+    setTitle('Mid-Term Examination 2026');
+    setSelectedClass(CLASS_OPTIONS[0]);
+    setSubject('Tajweed & Quran');
+    setMaxMarks(100);
+    setExamDate('2026-10-15');
+    setIsExamModalOpen(true);
+  };
+
+  const openEditExamModal = (ex: ExamRecord) => {
+    setEditingExam(ex);
+    setTitle(ex.title);
+    setSelectedClass(ex.classId);
+    setSubject(ex.subject);
+    setMaxMarks(ex.maxMarks);
+    setExamDate(ex.examDate);
+    setIsExamModalOpen(true);
+  };
+
+  const handleSaveExam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant?.id || !title) return;
     setSavingExam(true);
 
-    await examService.createExam(tenant.id, {
-      title,
-      classId: selectedClass,
-      subject,
-      maxMarks: Number(maxMarks),
-      examDate
-    });
+    if (editingExam) {
+      // Edit existing exam
+      await examService.updateExam(tenant.id, editingExam.id, {
+        title,
+        classId: selectedClass,
+        subject,
+        maxMarks: Number(maxMarks),
+        examDate
+      });
+    } else {
+      // Create new exam
+      await examService.createExam(tenant.id, {
+        title,
+        classId: selectedClass,
+        subject,
+        maxMarks: Number(maxMarks),
+        examDate
+      });
+    }
 
     setSavingExam(false);
     setIsExamModalOpen(false);
@@ -119,8 +155,8 @@ export const ExamsPage: React.FC = () => {
               </p>
             </div>
 
-            {user?.role !== 'PARENT' && (
-              <button onClick={() => setIsExamModalOpen(true)} className="btn btn-primary">
+            {canEdit && (
+              <button onClick={openCreateExamModal} className="btn btn-primary">
                 <Plus size={18} />
                 <span>Schedule New Exam</span>
               </button>
@@ -134,8 +170,8 @@ export const ExamsPage: React.FC = () => {
               icon="🏆"
               title="No Exams Scheduled Yet"
               description="Schedule examinations to record student grades and print academic report cards."
-              actionLabel={user?.role !== 'PARENT' ? "+ Schedule Exam" : undefined}
-              onAction={user?.role !== 'PARENT' ? () => setIsExamModalOpen(true) : undefined}
+              actionLabel={canEdit ? "+ Schedule Exam" : undefined}
+              onAction={canEdit ? openCreateExamModal : undefined}
             />
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
@@ -144,7 +180,14 @@ export const ExamsPage: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                       <span className="badge badge-trial">{ex.classId}</span>
-                      <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 500 }}>{ex.examDate}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 500 }}>{ex.examDate}</span>
+                        {canEdit && (
+                          <button onClick={() => openEditExamModal(ex)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }} title="Edit Exam Details">
+                            <Edit2 size={14} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', marginBottom: '4px' }}>
                       {ex.title}
@@ -154,7 +197,7 @@ export const ExamsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {user?.role !== 'PARENT' && (
+                  {canEdit && (
                     <button 
                       onClick={() => setSelectedExam(ex)} 
                       className="btn btn-outline btn-full btn-sm"
@@ -171,20 +214,20 @@ export const ExamsPage: React.FC = () => {
         </main>
       </div>
 
-      {/* Schedule Exam Modal */}
-      {isExamModalOpen && (
+      {/* Schedule / Edit Exam Modal */}
+      {isExamModalOpen && canEdit && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '480px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
-                Schedule Examination
+                {editingExam ? 'Edit Examination' : 'Schedule Examination'}
               </h3>
               <button onClick={() => setIsExamModalOpen(false)} className="btn btn-ghost btn-sm">
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateExam} style={{ display: 'grid', gap: '14px' }}>
+            <form onSubmit={handleSaveExam} style={{ display: 'grid', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Exam Title *</label>
                 <input type="text" className="input-field" value={title} onChange={e => setTitle(e.target.value)} required />
@@ -217,7 +260,7 @@ export const ExamsPage: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button type="button" onClick={() => setIsExamModalOpen(false)} className="btn btn-outline">Cancel</button>
                 <button type="submit" disabled={savingExam} className="btn btn-primary">
-                  {savingExam ? 'Scheduling...' : 'Schedule Exam'}
+                  {savingExam ? 'Saving...' : editingExam ? 'Update Exam' : 'Schedule Exam'}
                 </button>
               </div>
             </form>

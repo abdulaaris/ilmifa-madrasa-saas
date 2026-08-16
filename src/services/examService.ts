@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { ExamRecord, ExamResult } from '../types';
 
@@ -37,6 +37,22 @@ export const examService = {
     }
 
     return JSON.parse(localStorage.getItem(`exams_${tenantId}`) || '[]');
+  },
+
+  async updateExam(tenantId: string, examId: string, updates: Partial<ExamRecord>): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'madrasas', tenantId, 'exams', examId), updates);
+    } catch (e) {
+      console.warn('Firestore updateExam fallback:', e);
+    }
+
+    const localKey = `exams_${tenantId}`;
+    const existing: ExamRecord[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const idx = existing.findIndex(e => e.id === examId);
+    if (idx >= 0) {
+      existing[idx] = { ...existing[idx], ...updates };
+      localStorage.setItem(localKey, JSON.stringify(existing));
+    }
   },
 
   async saveResult(tenantId: string, data: Omit<ExamResult, 'id' | 'tenantId' | 'percentage' | 'grade' | 'createdAt'>): Promise<ExamResult> {

@@ -6,7 +6,7 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { CreateMadrasaModal } from '../../components/superadmin/CreateMadrasaModal';
-import { Plus, Search, ExternalLink, Settings2, Check } from 'lucide-react';
+import { Plus, Search, ExternalLink, Settings2, Check, Edit2, X } from 'lucide-react';
 
 export const CoreMadrasasPage: React.FC = () => {
   const [tenants, setTenants] = useState<MadrasaTenant[]>([]);
@@ -18,6 +18,16 @@ export const CoreMadrasasPage: React.FC = () => {
   // Module edit state
   const [selectedTenant, setSelectedTenant] = useState<MadrasaTenant | null>(null);
   const [editModules, setEditModules] = useState<MadrasaModule[]>([]);
+
+  // Madrasa Edit Details Modal State
+  const [editingMadrasa, setEditingMadrasa] = useState<MadrasaTenant | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editShortName, setEditShortName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPrincipalName, setEditPrincipalName] = useState('');
+  const [editPrincipalEmail, setEditPrincipalEmail] = useState('');
+  const [savingMadrasa, setSavingMadrasa] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -46,6 +56,35 @@ export const CoreMadrasasPage: React.FC = () => {
       setSelectedTenant(null);
       await loadData();
     }
+  };
+
+  const openEditMadrasaModal = (t: MadrasaTenant) => {
+    setEditingMadrasa(t);
+    setEditName(t.name);
+    setEditShortName(t.shortName || '');
+    setEditPhone(t.phone || '');
+    setEditEmail(t.email || '');
+    setEditPrincipalName(t.principalName || '');
+    setEditPrincipalEmail(t.principalEmail || '');
+  };
+
+  const handleSaveMadrasaDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMadrasa) return;
+    setSavingMadrasa(true);
+
+    await tenantService.updateTenant(editingMadrasa.id, {
+      name: editName,
+      shortName: editShortName,
+      phone: editPhone,
+      email: editEmail,
+      principalName: editPrincipalName,
+      principalEmail: editPrincipalEmail
+    });
+
+    setSavingMadrasa(false);
+    setEditingMadrasa(null);
+    await loadData();
   };
 
   const toggleModule = (mod: MadrasaModule) => {
@@ -187,16 +226,22 @@ export const CoreMadrasasPage: React.FC = () => {
                           </select>
                         </td>
                         <td>
-                          <a 
-                            href={`/m/${t.slug}/login`} 
-                            target="_blank" 
-                            rel="noreferrer"
-                            className="btn btn-outline btn-sm"
-                            style={{ gap: '4px', textDecoration: 'none' }}
-                          >
-                            <ExternalLink size={14} />
-                            <span>Portal Login</span>
-                          </a>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button onClick={() => openEditMadrasaModal(t)} className="btn btn-outline btn-sm" title="Edit Madrasa">
+                              <Edit2 size={14} />
+                              <span>Edit</span>
+                            </button>
+                            <a 
+                              href={`/m/${t.slug}/login`} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="btn btn-outline btn-sm"
+                              style={{ gap: '4px', textDecoration: 'none' }}
+                            >
+                              <ExternalLink size={14} />
+                              <span>Portal</span>
+                            </a>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -207,6 +252,63 @@ export const CoreMadrasasPage: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* Edit Madrasa Details Modal */}
+      {editingMadrasa && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '520px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
+                Edit Madrasa — {editingMadrasa.id}
+              </h3>
+              <button onClick={() => setEditingMadrasa(null)} className="btn btn-ghost btn-sm">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMadrasaDetails} style={{ display: 'grid', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Madrasa Name *</label>
+                <input type="text" className="input-field" value={editName} onChange={e => setEditName(e.target.value)} required />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Short Name</label>
+                  <input type="text" className="input-field" value={editShortName} onChange={e => setEditShortName(e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Official Phone</label>
+                  <input type="text" className="input-field" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Official Email</label>
+                <input type="email" className="input-field" value={editEmail} onChange={e => setEditEmail(e.target.value)} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Principal Name</label>
+                  <input type="text" className="input-field" value={editPrincipalName} onChange={e => setEditPrincipalName(e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Principal Email</label>
+                  <input type="email" className="input-field" value={editPrincipalEmail} onChange={e => setEditPrincipalEmail(e.target.value)} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
+                <button type="button" onClick={() => setEditingMadrasa(null)} className="btn btn-outline">Cancel</button>
+                <button type="submit" disabled={savingMadrasa} className="btn btn-primary">
+                  {savingMadrasa ? 'Saving...' : 'Update Madrasa'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Module Edit Modal */}
       {selectedTenant && (
