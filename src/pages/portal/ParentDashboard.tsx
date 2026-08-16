@@ -7,7 +7,7 @@ import { parentService } from '../../services/parentService';
 import { attendanceService } from '../../services/attendanceService';
 import { feeService } from '../../services/feeService';
 import { examService } from '../../services/examService';
-import { Student, FeeRecord, ExamResult, Parent } from '../../types';
+import { Student, FeeRecord, ExamResult } from '../../types';
 import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
@@ -28,6 +28,7 @@ export const ParentDashboard: React.FC = () => {
   const [childFees, setChildFees] = useState<FeeRecord[]>([]);
   const [childResults, setChildResults] = useState<ExamResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingChildMetrics, setLoadingChildMetrics] = useState(false);
 
   useEffect(() => {
     if (tenant?.id && user) {
@@ -61,7 +62,6 @@ export const ParentDashboard: React.FC = () => {
         setChildrenList(linked);
 
         if (linked.length > 0) {
-          // Keep current selection if valid, else pick first child
           setSelectedChild(prev => {
             if (prev && linked.some(c => c.id === prev.id)) return prev;
             return linked[0];
@@ -74,19 +74,29 @@ export const ParentDashboard: React.FC = () => {
     }
   }, [tenant, user]);
 
+  // Fetch unique metrics strictly per selected child
   useEffect(() => {
-    if (tenant?.id && selectedChild) {
+    if (tenant?.id && selectedChild?.id) {
+      setLoadingChildMetrics(true);
+      // Reset metrics immediately so previous child's metrics do not spill over
+      setAttendanceSummary({ present: 0, absent: 0, total: 0, percentage: 100 });
+      setChildFees([]);
+      setChildResults([]);
+
+      const targetStudentId = selectedChild.id;
+
       Promise.all([
-        attendanceService.getStudentAttendance(tenant.id, selectedChild.id),
-        feeService.getFeesByStudent(tenant.id, selectedChild.id),
-        examService.getResultsByStudent(tenant.id, selectedChild.id)
+        attendanceService.getStudentAttendance(tenant.id, targetStudentId),
+        feeService.getFeesByStudent(tenant.id, targetStudentId),
+        examService.getResultsByStudent(tenant.id, targetStudentId)
       ]).then(([att, fList, rList]) => {
         setAttendanceSummary(att);
         setChildFees(fList);
         setChildResults(rList);
+        setLoadingChildMetrics(false);
       });
     }
-  }, [tenant, selectedChild]);
+  }, [tenant?.id, selectedChild?.id]);
 
   const totalDues = childFees.reduce((acc, curr) => acc + curr.balance, 0);
 
@@ -119,7 +129,7 @@ export const ParentDashboard: React.FC = () => {
                     Linked Children ({childrenList.length})
                   </div>
                   <div style={{ fontSize: '12px', color: '#7B2525', fontWeight: 600 }}>
-                    Click name to switch child
+                    Click child name to view unique report card & fees
                   </div>
                 </div>
 
@@ -173,67 +183,73 @@ export const ParentDashboard: React.FC = () => {
                     <span className="badge badge-active">Active Student</span>
                   </div>
 
-                  {/* Overview Metrics Cards */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
-                    <div className="card" style={{ textAlign: 'center', padding: '16px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280' }}>Attendance</div>
-                      <div style={{ fontSize: '26px', fontWeight: 700, color: '#059669', marginTop: '4px' }}>
-                        {attendanceSummary.percentage}%
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>
-                        {attendanceSummary.present} Present / {attendanceSummary.absent} Absent
-                      </div>
-                    </div>
-
-                    <div className="card" style={{ textAlign: 'center', padding: '16px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280' }}>Fee Dues</div>
-                      <div style={{ fontSize: '26px', fontWeight: 700, color: totalDues > 0 ? '#DC2626' : '#059669', marginTop: '4px' }}>
-                        ₹{totalDues.toLocaleString()}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>
-                        {totalDues > 0 ? 'Pending Payment' : 'All Settled'}
-                      </div>
-                    </div>
-
-                    <div className="card" style={{ textAlign: 'center', padding: '16px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280' }}>Recent Exams</div>
-                      <div style={{ fontSize: '26px', fontWeight: 700, color: '#7B2525', marginTop: '4px' }}>
-                        {childResults.length}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>Exam Records</div>
-                    </div>
-                  </div>
-
-                  {/* Academic Report Cards */}
-                  <div className="card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                      <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#252525', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Award size={18} style={{ color: '#7B2525' }} />
-                        <span>Academic Report Cards — {selectedChild.name}</span>
-                      </h4>
-                    </div>
-
-                    {childResults.length === 0 ? (
-                      <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '13px' }}>
-                        No exam results published yet for {selectedChild.name}.
-                      </div>
-                    ) : (
-                      <div style={{ display: 'grid', gap: '10px' }}>
-                        {childResults.map(res => (
-                          <div key={res.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', backgroundColor: '#FAF9F7', borderRadius: '10px', border: '1px solid #E2DDD5' }}>
-                            <div>
-                              <div style={{ fontSize: '14px', fontWeight: 600, color: '#252525' }}>{res.examTitle}</div>
-                              <div style={{ fontSize: '12px', color: '#666' }}>Subject: {res.subject} • Marks: {res.obtainedMarks}/{res.maxMarks}</div>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '16px', fontWeight: 700, color: '#7B2525' }}>Grade {res.grade}</div>
-                              <div style={{ fontSize: '11px', color: '#059669', fontWeight: 600 }}>{res.percentage}%</div>
-                            </div>
+                  {loadingChildMetrics ? (
+                    <div style={{ padding: '36px', textAlign: 'center', color: '#666' }}>Fetching reports for {selectedChild.name}...</div>
+                  ) : (
+                    <>
+                      {/* Overview Metrics Cards */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                        <div className="card" style={{ textAlign: 'center', padding: '16px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280' }}>Attendance</div>
+                          <div style={{ fontSize: '26px', fontWeight: 700, color: '#059669', marginTop: '4px' }}>
+                            {attendanceSummary.percentage}%
                           </div>
-                        ))}
+                          <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>
+                            {attendanceSummary.present} Present / {attendanceSummary.absent} Absent
+                          </div>
+                        </div>
+
+                        <div className="card" style={{ textAlign: 'center', padding: '16px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280' }}>Fee Dues</div>
+                          <div style={{ fontSize: '26px', fontWeight: 700, color: totalDues > 0 ? '#DC2626' : '#059669', marginTop: '4px' }}>
+                            ₹{totalDues.toLocaleString()}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>
+                            {totalDues > 0 ? 'Pending Payment' : 'All Settled'}
+                          </div>
+                        </div>
+
+                        <div className="card" style={{ textAlign: 'center', padding: '16px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280' }}>Recent Exams</div>
+                          <div style={{ fontSize: '26px', fontWeight: 700, color: '#7B2525', marginTop: '4px' }}>
+                            {childResults.length}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>Exam Records</div>
+                        </div>
                       </div>
-                    )}
-                  </div>
+
+                      {/* Academic Report Cards */}
+                      <div className="card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                          <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#252525', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Award size={18} style={{ color: '#7B2525' }} />
+                            <span>Academic Report Cards — {selectedChild.name}</span>
+                          </h4>
+                        </div>
+
+                        {childResults.length === 0 ? (
+                          <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '13px' }}>
+                            No exam results published yet for {selectedChild.name}.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'grid', gap: '10px' }}>
+                            {childResults.map(res => (
+                              <div key={res.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', backgroundColor: '#FAF9F7', borderRadius: '10px', border: '1px solid #E2DDD5' }}>
+                                <div>
+                                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#252525' }}>{res.examTitle}</div>
+                                  <div style={{ fontSize: '12px', color: '#666' }}>Subject: {res.subject} • Marks: {res.obtainedMarks}/{res.maxMarks}</div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#7B2525' }}>Grade {res.grade}</div>
+                                  <div style={{ fontSize: '11px', color: '#059669', fontWeight: 600 }}>{res.percentage}%</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

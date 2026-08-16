@@ -38,7 +38,7 @@ export const feeService = {
       const snap = await getDocs(collection(db, 'madrasas', tenantId, 'fees'));
       const list: FeeRecord[] = [];
       snap.forEach(d => list.push(d.data() as FeeRecord));
-      if (list.length > 0) return list;
+      return list;
     } catch (e) {
       console.warn('Firestore getFeesByTenant fallback:', e);
     }

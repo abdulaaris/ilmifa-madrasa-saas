@@ -31,7 +31,7 @@ export const examService = {
       const snap = await getDocs(collection(db, 'madrasas', tenantId, 'exams'));
       const list: ExamRecord[] = [];
       snap.forEach(d => list.push(d.data() as ExamRecord));
-      if (list.length > 0) return list;
+      return list;
     } catch (e) {
       console.warn('Firestore getExamsByTenant fallback:', e);
     }
@@ -99,7 +99,7 @@ export const examService = {
         const res = d.data() as ExamResult;
         if (res.studentId === studentId) list.push(res);
       });
-      if (list.length > 0) return list;
+      return list;
     } catch (e) {
       console.warn('Firestore getResultsByStudent fallback:', e);
     }
