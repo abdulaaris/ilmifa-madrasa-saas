@@ -30,6 +30,9 @@ export const tenantService = {
     principalPassword: string;
     branding: TenantBranding;
     enabledModules: MadrasaModule[];
+    status?: MadrasaStatus;
+    trialStartDate?: string;
+    trialEndsAt?: string;
   }): Promise<{ tenant: MadrasaTenant; principalUid: string }> {
     const tenantId = await this.generateTenantId();
 
@@ -51,13 +54,15 @@ export const tenantService = {
       email: params.email,
       phone: params.phone,
       address: params.address,
-      status: 'active',
+      status: params.status || 'active',
       principalUid: principalUser.uid,
       principalEmail: params.principalEmail,
       principalName: params.principalName,
       branding: params.branding,
       enabledModules: params.enabledModules,
       domainStatus: 'generated',
+      ...(params.trialStartDate ? { trialStartDate: params.trialStartDate } : {}),
+      ...(params.trialEndsAt ? { trialEndsAt: params.trialEndsAt } : {}),
       createdAt: new Date().toISOString(),
     };
 
@@ -100,18 +105,56 @@ export const tenantService = {
   },
 
   /**
+   * Evaluates if a trial period has expired and auto-suspends the tenant if past trialEndsAt.
+   */
+  async checkAndEnforceTrialExpiry(tenant: MadrasaTenant): Promise<MadrasaTenant> {
+    if (tenant.status === 'trial' && tenant.trialEndsAt) {
+      const now = new Date().getTime();
+      const expiryTime = new Date(tenant.trialEndsAt).getTime();
+
+      if (now >= expiryTime) {
+        // Auto suspend tenant!
+        const updates: Partial<MadrasaTenant> = {
+          status: 'suspended',
+          suspendedAt: new Date().toISOString(),
+          suspensionReason: `Trial period expired on ${new Date(tenant.trialEndsAt).toLocaleString()}`
+        };
+
+        try {
+          await updateDoc(doc(db, 'madrasas', tenant.id), updates);
+        } catch (e) {
+          console.warn('Firestore auto-suspend update failed:', e);
+        }
+
+        const updated = { ...tenant, ...updates };
+        localStorage.setItem(`tenant_${tenant.id}`, JSON.stringify(updated));
+        return updated;
+      }
+    }
+    return tenant;
+  },
+
+  /**
    * Get Tenant by Tenant ID
    */
   async getTenantById(tenantId: string): Promise<MadrasaTenant | null> {
+    let tenant: MadrasaTenant | null = null;
     try {
       const snap = await getDoc(doc(db, 'madrasas', tenantId));
-      if (snap.exists()) return snap.data() as MadrasaTenant;
+      if (snap.exists()) tenant = snap.data() as MadrasaTenant;
     } catch (e) {
       console.warn('Firestore getTenantById fallback:', e);
     }
 
-    const local = localStorage.getItem(`tenant_${tenantId}`);
-    return local ? JSON.parse(local) : null;
+    if (!tenant) {
+      const local = localStorage.getItem(`tenant_${tenantId}`);
+      tenant = local ? JSON.parse(local) : null;
+    }
+
+    if (tenant) {
+      return await this.checkAndEnforceTrialExpiry(tenant);
+    }
+    return null;
   },
 
   /**
@@ -119,18 +162,26 @@ export const tenantService = {
    */
   async getTenantBySlug(slug: string): Promise<MadrasaTenant | null> {
     const cleanSlug = slug.toLowerCase().trim();
+    let tenant: MadrasaTenant | null = null;
     try {
       const q = query(collection(db, 'madrasas'), where('slug', '==', cleanSlug));
       const snap = await getDocs(q);
       if (!snap.empty) {
-        return snap.docs[0].data() as MadrasaTenant;
+        tenant = snap.docs[0].data() as MadrasaTenant;
       }
     } catch (e) {
       console.warn('Firestore getTenantBySlug fallback:', e);
     }
 
-    const all = await this.getAllTenants();
-    return all.find(t => t.slug === cleanSlug) || null;
+    if (!tenant) {
+      const all = await this.getAllTenants();
+      tenant = all.find(t => t.slug === cleanSlug) || null;
+    }
+
+    if (tenant) {
+      return await this.checkAndEnforceTrialExpiry(tenant);
+    }
+    return null;
   },
 
   /**

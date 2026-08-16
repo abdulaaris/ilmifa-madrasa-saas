@@ -58,6 +58,10 @@ export interface MadrasaTenant {
   enabledModules: MadrasaModule[];
   customDomain?: string;
   domainStatus: DomainStatus;
+  trialStartDate?: string;
+  trialEndsAt?: string;
+  suspendedAt?: string;
+  suspensionReason?: string;
   createdAt: string;
 }
 

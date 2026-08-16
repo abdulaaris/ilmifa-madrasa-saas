@@ -143,6 +143,32 @@ export const PortalLoginPage: React.FC = () => {
     return <TenantNotFound slug={tenantSlug || 'unknown'} />;
   }
 
+  if (tenant?.status === 'suspended') {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div style={{ backgroundColor: '#FFF', borderRadius: '20px', border: '1.5px solid #FCA5A5', padding: '36px 28px', maxWidth: '480px', width: '100%', textAlign: 'center', boxShadow: '0 20px 40px rgba(220, 38, 38, 0.1)' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '32px' }}>
+            🔒
+          </div>
+          <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#991B1B', marginBottom: '8px' }}>
+            Madrasa Subscription Suspended
+          </h2>
+          <p style={{ fontSize: '14px', color: '#7F1D1D', marginBottom: '16px', lineHeight: 1.5 }}>
+            Access to <strong>{tenant.name}</strong> portal has been automatically suspended.
+          </p>
+          {tenant.suspensionReason && (
+            <div style={{ padding: '10px 14px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', color: '#B91C1C', fontSize: '12px', fontWeight: 600, marginBottom: '20px' }}>
+              ⏱️ {tenant.suspensionReason}
+            </div>
+          )}
+          <div style={{ padding: '14px', backgroundColor: '#FFF5F5', borderRadius: '12px', fontSize: '13px', color: '#991B1B', border: '1px solid #FECACA' }}>
+            📞 Please contact <strong>iLmiFa Platform Administrator</strong> to renew or upgrade your Madrasa subscription.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       minHeight: '100vh',

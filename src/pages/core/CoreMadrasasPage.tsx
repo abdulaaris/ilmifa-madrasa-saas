@@ -29,6 +29,7 @@ export const CoreMadrasasPage: React.FC = () => {
   const [editEmail, setEditEmail] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editStatus, setEditStatus] = useState<MadrasaStatus>('active');
+  const [editTrialEndsAt, setEditTrialEndsAt] = useState('');
   const [editPrincipalName, setEditPrincipalName] = useState('');
   const [editPrincipalEmail, setEditPrincipalEmail] = useState('');
   const [editPrincipalPassword, setEditPrincipalPassword] = useState('');
@@ -72,6 +73,17 @@ export const CoreMadrasasPage: React.FC = () => {
     setEditEmail(t.email || '');
     setEditAddress(t.address || '');
     setEditStatus(t.status || 'active');
+    
+    // Set default trial expiry date if not already set (7 days from now at 23:59)
+    if (t.trialEndsAt) {
+      setEditTrialEndsAt(t.trialEndsAt);
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      d.setHours(23, 59, 0, 0);
+      setEditTrialEndsAt(d.toISOString().substring(0, 16));
+    }
+
     setEditPrincipalName(t.principalName || '');
     setEditPrincipalEmail(t.principalEmail || '');
     setEditPrincipalPassword('');
@@ -93,7 +105,11 @@ export const CoreMadrasasPage: React.FC = () => {
       address: editAddress,
       status: editStatus,
       principalName: editPrincipalName,
-      principalEmail: editPrincipalEmail
+      principalEmail: editPrincipalEmail,
+      ...(editStatus === 'trial' ? {
+        trialStartDate: editingMadrasa.trialStartDate || new Date().toISOString(),
+        trialEndsAt: editTrialEndsAt
+      } : {})
     });
 
     // Cascade update to Principal User Profile document & Password reset if provided
@@ -244,8 +260,8 @@ export const CoreMadrasasPage: React.FC = () => {
                               fontSize: '12px',
                               fontWeight: 600,
                               border: '1px solid #E5E7EB',
-                              backgroundColor: t.status === 'active' ? '#ECFDF5' : t.status === 'trial' ? '#EFF6FF' : '#FEF2F2',
-                              color: t.status === 'active' ? '#047857' : t.status === 'trial' ? '#1D4ED8' : '#B91C1C',
+                              backgroundColor: t.status === 'active' ? '#ECFDF5' : t.status === 'trial' ? '#FFFBEB' : '#FEF2F2',
+                              color: t.status === 'active' ? '#047857' : t.status === 'trial' ? '#B45309' : '#B91C1C',
                               cursor: 'pointer'
                             }}
                           >
@@ -253,6 +269,16 @@ export const CoreMadrasasPage: React.FC = () => {
                             <option value="trial">Trial</option>
                             <option value="suspended">Suspended</option>
                           </select>
+                          {t.status === 'trial' && t.trialEndsAt && (
+                            <div style={{ fontSize: '11px', color: '#D97706', fontWeight: 600, marginTop: '3px' }}>
+                              ⏱️ Ends: {new Date(t.trialEndsAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          )}
+                          {t.status === 'suspended' && (
+                            <div style={{ fontSize: '10px', color: '#DC2626', fontWeight: 600, marginTop: '3px' }}>
+                              🔴 {t.suspensionReason || 'Suspended'}
+                            </div>
+                          )}
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '4px' }}>
@@ -329,14 +355,32 @@ export const CoreMadrasasPage: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Madrasa Status</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Madrasa Subscription Status</label>
                 <select className="input-field" value={editStatus} onChange={e => setEditStatus(e.target.value as MadrasaStatus)}>
-                  <option value="active">Active Subscription</option>
-                  <option value="trial">Trial Period</option>
-                  <option value="suspended">Suspended</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="active">Active (Paid Plan)</option>
+                  <option value="trial">Trial Version (Time Limited)</option>
+                  <option value="suspended">Suspended Access</option>
+                  <option value="inactive">Inactive Account</option>
                 </select>
               </div>
+
+              {editStatus === 'trial' && (
+                <div style={{ backgroundColor: '#FFFBEB', border: '1.5px solid #FDE68A', padding: '14px 16px', borderRadius: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#92400E', marginBottom: '6px' }}>
+                    ⏱️ Trial Expiry Date & Time (Auto-Suspend Cutoff) *
+                  </label>
+                  <input 
+                    type="datetime-local" 
+                    className="input-field" 
+                    value={editTrialEndsAt} 
+                    onChange={e => setEditTrialEndsAt(e.target.value)} 
+                    required={editStatus === 'trial'}
+                  />
+                  <div style={{ fontSize: '11px', color: '#B45309', marginTop: '6px', lineHeight: 1.4 }}>
+                    ⚡ <strong>Auto-Suspend Rule:</strong> When this exact date & time passes, the system will automatically block and suspend this Madrasa's login portal until renewed!
+                  </div>
+                </div>
+              )}
 
               <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '14px', marginTop: '4px' }}>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#7B2525', marginBottom: '10px' }}>
