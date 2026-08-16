@@ -4,15 +4,14 @@ import { useTenant } from '../../context/TenantContext';
 import { examService } from '../../services/examService';
 import { studentService } from '../../services/studentService';
 import { CLASS_OPTIONS } from '../../config/constants';
-import { ExamRecord, Student } from '../../types';
+import { ExamRecord, Student, ExamResult } from '../../types';
 import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Award, Plus, X, Edit2, Trash2 } from 'lucide-react';
+import { Award, Plus, X, Edit2, Trash2, Check } from 'lucide-react';
 
 import { classService } from '../../services/classService';
-
 import { teacherService } from '../../services/teacherService';
 
 export const ExamsPage: React.FC = () => {
@@ -37,13 +36,12 @@ export const ExamsPage: React.FC = () => {
   const [examDate, setExamDate] = useState('2026-10-15');
   const [savingExam, setSavingExam] = useState(false);
 
-  // Result Entry Modal
+  // Excel Sheet Bulk Result Entry Modal State
   const [selectedExam, setSelectedExam] = useState<ExamRecord | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [obtainedMarks, setObtainedMarks] = useState<number>(85);
-  const [remarks, setRemarks] = useState('Excellent recitation and tajweed rules.');
-  const [savingResult, setSavingResult] = useState(false);
-  const [resultSuccess, setResultSuccess] = useState(false);
+  const [bulkMarks, setBulkMarks] = useState<Record<string, { obtainedMarks: number | ''; remarks: string }>>({});
+  const [loadingExamStudents, setLoadingExamStudents] = useState(false);
+  const [savingBulkResults, setSavingBulkResults] = useState(false);
+  const [bulkSuccessMessage, setBulkSuccessMessage] = useState<string | null>(null);
 
   const loadData = async () => {
     if (tenant?.id) {
@@ -105,19 +103,60 @@ export const ExamsPage: React.FC = () => {
     setIsExamModalOpen(true);
   };
 
-  const openEnterMarksModal = (ex: ExamRecord) => {
+  const openEnterMarksModal = async (ex: ExamRecord) => {
     setSelectedExam(ex);
-    const classStudents = students.filter(s => s.classId === ex.classId);
-    if (classStudents.length > 0) {
-      setSelectedStudentId(classStudents[0].id);
-    } else if (students.length > 0) {
-      setSelectedStudentId(students[0].id);
-    } else {
-      setSelectedStudentId('');
+    setLoadingExamStudents(true);
+    setBulkSuccessMessage(null);
+
+    let existingResults: ExamResult[] = [];
+    if (tenant?.id) {
+      existingResults = await examService.getResultsByExam(tenant.id, ex.id);
     }
-    setObtainedMarks(85);
-    setRemarks('Good academic performance.');
-    setResultSuccess(false);
+
+    const classStudents = students.filter(s => s.classId === ex.classId);
+    const initialMap: Record<string, { obtainedMarks: number | ''; remarks: string }> = {};
+
+    classStudents.forEach(s => {
+      const foundRes = existingResults.find(r => r.studentId === s.id);
+      initialMap[s.id] = {
+        obtainedMarks: foundRes !== undefined ? foundRes.obtainedMarks : '',
+        remarks: foundRes?.remarks || ''
+      };
+    });
+
+    setBulkMarks(initialMap);
+    setLoadingExamStudents(false);
+  };
+
+  const handleMarkChange = (studentId: string, val: string) => {
+    const num = val === '' ? '' : Math.min(selectedExam?.maxMarks || 100, Math.max(0, Number(val)));
+    setBulkMarks(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        obtainedMarks: num
+      }
+    }));
+  };
+
+  const handleRemarkChange = (studentId: string, val: string) => {
+    setBulkMarks(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        remarks: val
+      }
+    }));
+  };
+
+  const handleSetAllDefaultMarks = (defaultScore: number) => {
+    const updated = { ...bulkMarks };
+    Object.keys(updated).forEach(sId => {
+      if (updated[sId].obtainedMarks === '') {
+        updated[sId] = { ...updated[sId], obtainedMarks: defaultScore };
+      }
+    });
+    setBulkMarks(updated);
   };
 
   const handleSaveExam = async (e: React.FormEvent) => {
@@ -126,7 +165,6 @@ export const ExamsPage: React.FC = () => {
     setSavingExam(true);
 
     if (editingExam) {
-      // Edit existing exam
       await examService.updateExam(tenant.id, editingExam.id, {
         title,
         classId: selectedClass,
@@ -135,7 +173,6 @@ export const ExamsPage: React.FC = () => {
         examDate
       });
     } else {
-      // Create new exam
       await examService.createExam(tenant.id, {
         title,
         classId: selectedClass,
@@ -158,37 +195,67 @@ export const ExamsPage: React.FC = () => {
     }
   };
 
-  const handleSaveResult = async (e: React.FormEvent) => {
+  const handleSaveBulkResults = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tenant?.id || !selectedExam || !selectedStudentId) return;
-    setSavingResult(true);
+    if (!tenant?.id || !selectedExam) return;
+    setSavingBulkResults(true);
 
-    const targetStudent = students.find(s => s.id === selectedStudentId);
+    const classStudents = students.filter(s => s.classId === selectedExam.classId);
+    const recordsToSave: Array<Omit<ExamResult, 'id' | 'tenantId' | 'percentage' | 'grade' | 'createdAt'>> = [];
 
-    if (!targetStudent) {
-      alert('Selected student not found.');
-      setSavingResult(false);
+    classStudents.forEach(s => {
+      const markEntry = bulkMarks[s.id];
+      if (markEntry && markEntry.obtainedMarks !== '') {
+        recordsToSave.push({
+          examId: selectedExam.id,
+          examTitle: selectedExam.title,
+          studentId: s.id,
+          studentName: s.name,
+          classId: selectedExam.classId,
+          subject: selectedExam.subject,
+          maxMarks: selectedExam.maxMarks,
+          obtainedMarks: Number(markEntry.obtainedMarks),
+          remarks: markEntry.remarks || ''
+        });
+      }
+    });
+
+    if (recordsToSave.length === 0) {
+      alert('Please enter marks for at least one student before saving.');
+      setSavingBulkResults(false);
       return;
     }
 
-    await examService.saveResult(tenant.id, {
-      examId: selectedExam.id,
-      examTitle: selectedExam.title,
-      studentId: targetStudent.id,
-      studentName: targetStudent.name,
-      classId: selectedExam.classId,
-      subject: selectedExam.subject,
-      maxMarks: selectedExam.maxMarks,
-      obtainedMarks: Number(obtainedMarks),
-      remarks
-    });
-
-    setSavingResult(false);
-    setResultSuccess(true);
+    await examService.saveBulkResults(tenant.id, recordsToSave);
+    setSavingBulkResults(false);
+    setBulkSuccessMessage(`✓ Marks saved successfully for ${recordsToSave.length} students!`);
     setTimeout(() => {
-      setResultSuccess(false);
+      setBulkSuccessMessage(null);
       setSelectedExam(null);
-    }, 1200);
+    }, 1500);
+  };
+
+  const calculateGradeBadge = (marks: number | '', max: number) => {
+    if (marks === '') return <span style={{ color: '#9CA3AF', fontSize: '12px' }}>Not Entered</span>;
+    const pct = Math.round((Number(marks) / max) * 100);
+    let grade = 'F';
+    let bg = '#FEE2E2';
+    let color = '#991B1B';
+
+    if (pct >= 90) { grade = 'A+'; bg = '#ECFDF5'; color = '#047857'; }
+    else if (pct >= 80) { grade = 'A'; bg = '#D1FAE5'; color = '#065F46'; }
+    else if (pct >= 70) { grade = 'B'; bg = '#EFF6FF'; color = '#1D4ED8'; }
+    else if (pct >= 60) { grade = 'C'; bg = '#FEF3C7'; color = '#B45309'; }
+    else if (pct >= 50) { grade = 'D'; bg = '#FFEDD5'; color = '#C2410C'; }
+
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600 }}>
+        <span>{pct}%</span>
+        <span style={{ padding: '2px 6px', borderRadius: '4px', backgroundColor: bg, color: color, fontSize: '11px' }}>
+          {grade}
+        </span>
+      </span>
+    );
   };
 
   return (
@@ -341,17 +408,18 @@ export const ExamsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Enter Marks Modal */}
+      {/* Excel Sheet Quick Student Marks Entry Modal */}
       {selectedExam && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '500px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ backgroundColor: '#FFF', borderRadius: '20px', maxWidth: '840px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            {/* Modal Header */}
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FAF9F7', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
               <div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
-                  Enter Student Marks
+                  📊 Excel Sheet Marks Entry — {selectedExam.title}
                 </h3>
-                <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                  {selectedExam.title} • Class: {selectedExam.classId} • Max: {selectedExam.maxMarks} Marks
+                <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
+                  Class: <strong>{selectedExam.classId}</strong> • Subject: <strong>{selectedExam.subject}</strong> • Max Marks: <strong>{selectedExam.maxMarks}</strong>
                 </div>
               </div>
               <button onClick={() => setSelectedExam(null)} className="btn btn-ghost btn-sm">
@@ -359,54 +427,103 @@ export const ExamsPage: React.FC = () => {
               </button>
             </div>
 
-            {resultSuccess ? (
-              <div style={{ padding: '24px', textAlign: 'center', color: '#059669', fontWeight: 600, fontSize: '16px' }}>
-                ✓ Marks Record Saved for Selected Student!
-              </div>
-            ) : (
-              <form onSubmit={handleSaveResult} style={{ display: 'grid', gap: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px', color: '#7B2525' }}>Select Target Student *</label>
-                  <select 
-                    className="input-field" 
-                    value={selectedStudentId} 
-                    onChange={e => setSelectedStudentId(e.target.value)}
-                    style={{ fontWeight: 600, borderColor: '#7B2525' }}
-                    required
-                  >
-                    {students.filter(s => s.classId === selectedExam.classId).map(s => (
-                      <option key={s.id} value={s.id}>{s.name} ({s.studentCode})</option>
-                    ))}
-                    {students.filter(s => s.classId === selectedExam.classId).length === 0 && (
-                      <option value="">No students in class {selectedExam.classId}</option>
-                    )}
-                  </select>
+            {/* Modal Content */}
+            <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>
+              {bulkSuccessMessage ? (
+                <div style={{ padding: '36px', textAlign: 'center', backgroundColor: '#ECFDF5', border: '1.5px solid #A7F3D0', borderRadius: '16px', color: '#047857', fontWeight: 700, fontSize: '16px' }}>
+                  {bulkSuccessMessage}
                 </div>
-
-                {selectedStudentId && (
-                  <div style={{ padding: '10px 12px', backgroundColor: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE', fontSize: '12px', color: '#1E40AF' }}>
-                    🎯 Saving result strictly for: <strong>{students.find(s => s.id === selectedStudentId)?.name}</strong> (Code: {students.find(s => s.id === selectedStudentId)?.studentCode})
+              ) : loadingExamStudents ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Loading class roster & existing marks...</div>
+              ) : (
+                <form onSubmit={handleSaveBulkResults}>
+                  {/* Quick Action Toolbar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
+                      Class Roster: <strong>{students.filter(s => s.classId === selectedExam.classId).length} Students</strong>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => handleSetAllDefaultMarks(selectedExam.maxMarks)} className="btn btn-outline btn-xs" style={{ fontSize: '11px' }}>
+                        ⚡ Set All {selectedExam.maxMarks} (Full Marks)
+                      </button>
+                      <button type="button" onClick={() => handleSetAllDefaultMarks(0)} className="btn btn-outline btn-xs" style={{ fontSize: '11px', color: '#DC2626' }}>
+                        Clear All
+                      </button>
+                    </div>
                   </div>
-                )}
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Obtained Marks (out of {selectedExam.maxMarks})</label>
-                  <input type="number" className="input-field" value={obtainedMarks} onChange={e => setObtainedMarks(Number(e.target.value))} max={selectedExam.maxMarks} required />
-                </div>
+                  {students.filter(s => s.classId === selectedExam.classId).length === 0 ? (
+                    <div style={{ padding: '32px', textAlign: 'center', color: '#666', backgroundColor: '#F9FAFB', borderRadius: '12px' }}>
+                      No students found in class <strong>{selectedExam.classId}</strong>.
+                    </div>
+                  ) : (
+                    <div style={{ border: '1px solid #E5E7EB', borderRadius: '12px', overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#FAF8F5', borderBottom: '1px solid #E5E7EB', textAlign: 'left' }}>
+                            <th style={{ padding: '10px 14px', width: '100px', color: '#6B7280', fontWeight: 600 }}>Code</th>
+                            <th style={{ padding: '10px 14px', color: '#252525', fontWeight: 600 }}>Student Name</th>
+                            <th style={{ padding: '10px 14px', width: '150px', color: '#252525', fontWeight: 600 }}>Obtained Marks</th>
+                            <th style={{ padding: '10px 14px', width: '130px', color: '#252525', fontWeight: 600 }}>Grade / %</th>
+                            <th style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600 }}>Remarks</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {students.filter(s => s.classId === selectedExam.classId).map((st, idx) => {
+                            const entry = bulkMarks[st.id] || { obtainedMarks: '', remarks: '' };
+                            return (
+                              <tr key={st.id} style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
+                                <td style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600, fontSize: '12px' }}>
+                                  {st.studentCode}
+                                </td>
+                                <td style={{ padding: '10px 14px', fontWeight: 600, color: '#111827' }}>
+                                  {st.name}
+                                </td>
+                                <td style={{ padding: '10px 14px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <input 
+                                      type="number" 
+                                      className="input-field" 
+                                      placeholder="0"
+                                      value={entry.obtainedMarks} 
+                                      onChange={e => handleMarkChange(st.id, e.target.value)} 
+                                      min={0}
+                                      max={selectedExam.maxMarks}
+                                      style={{ width: '80px', padding: '6px 10px', fontWeight: 700, textAlign: 'center', borderColor: entry.obtainedMarks !== '' ? '#7B2525' : '#D1D5DB' }}
+                                    />
+                                    <span style={{ fontSize: '11px', color: '#6B7280' }}>/ {selectedExam.maxMarks}</span>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '10px 14px' }}>
+                                  {calculateGradeBadge(entry.obtainedMarks, selectedExam.maxMarks)}
+                                </td>
+                                <td style={{ padding: '10px 14px' }}>
+                                  <input 
+                                    type="text" 
+                                    className="input-field" 
+                                    placeholder="Good performance..."
+                                    value={entry.remarks} 
+                                    onChange={e => handleRemarkChange(st.id, e.target.value)} 
+                                    style={{ padding: '6px 10px', fontSize: '12px' }}
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Teacher Remarks</label>
-                  <input type="text" className="input-field" value={remarks} onChange={e => setRemarks(e.target.value)} />
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-                  <button type="button" onClick={() => setSelectedExam(null)} className="btn btn-outline">Cancel</button>
-                  <button type="submit" disabled={savingResult || !selectedStudentId} className="btn btn-primary">
-                    {savingResult ? 'Saving Marks...' : 'Save Result'}
-                  </button>
-                </div>
-              </form>
-            )}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+                    <button type="button" onClick={() => setSelectedExam(null)} className="btn btn-outline">Cancel</button>
+                    <button type="submit" disabled={savingBulkResults || students.filter(s => s.classId === selectedExam.classId).length === 0} className="btn btn-primary btn-lg">
+                      {savingBulkResults ? 'Saving All Student Marks...' : '💾 Save All Student Marks'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -119,5 +119,29 @@ export const examService = {
 
     const all: ExamResult[] = JSON.parse(localStorage.getItem(`results_${tenantId}`) || '[]');
     return all.filter(r => r.studentId === studentId);
+  },
+
+  async getResultsByExam(tenantId: string, examId: string): Promise<ExamResult[]> {
+    try {
+      const snap = await getDocs(collection(db, 'madrasas', tenantId, 'results'));
+      const list: ExamResult[] = [];
+      snap.forEach(d => {
+        const res = d.data() as ExamResult;
+        if (res.examId === examId) list.push(res);
+      });
+      return list;
+    } catch (e) {
+      console.warn('Firestore getResultsByExam fallback:', e);
+    }
+
+    const all: ExamResult[] = JSON.parse(localStorage.getItem(`results_${tenantId}`) || '[]');
+    return all.filter(r => r.examId === examId);
+  },
+
+  async saveBulkResults(
+    tenantId: string, 
+    results: Array<Omit<ExamResult, 'id' | 'tenantId' | 'percentage' | 'grade' | 'createdAt'>>
+  ): Promise<void> {
+    await Promise.all(results.map(r => this.saveResult(tenantId, r)));
   }
 };
