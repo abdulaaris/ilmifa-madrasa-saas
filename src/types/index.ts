@@ -32,6 +32,7 @@ export interface UserProfile {
   subjects?: string[]; // Subjects for Teachers
   createdAt: string;
   updatedAt?: string;
+  passwordResetByAdmin?: boolean;
 }
 
 export interface TenantBranding {

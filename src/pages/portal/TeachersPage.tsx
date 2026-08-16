@@ -101,7 +101,8 @@ export const TeachersPage: React.FC = () => {
           name,
           mobile,
           assignedClasses: selectedClasses,
-          subjects
+          subjects,
+          ...(pass.trim() ? { password: pass.trim() } : {})
         });
       } else {
         // Create new teacher account
@@ -271,7 +272,7 @@ export const TeachersPage: React.FC = () => {
                 <input type="text" className="input-field" placeholder="Maulana Ibrahim" value={name} onChange={e => setName(e.target.value)} required />
               </div>
 
-              {!editingTeacher && (
+              {!editingTeacher ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Login Email *</label>
@@ -280,6 +281,17 @@ export const TeachersPage: React.FC = () => {
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Initial Password *</label>
                     <input type="password" className="input-field" placeholder="••••••••" value={pass} onChange={e => setPass(e.target.value)} required />
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Login Email</label>
+                    <input type="email" className="input-field" value={email} disabled style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Reset Password (Optional)</label>
+                    <input type="password" className="input-field" placeholder="Enter new password to reset" value={pass} onChange={e => setPass(e.target.value)} />
                   </div>
                 </div>
               )}

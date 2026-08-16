@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { tenantService } from '../../services/tenantService';
+import { userService } from '../../services/userService';
 import { MadrasaTenant, MadrasaStatus, MadrasaModule } from '../../types';
 import { ALL_MODULES } from '../../config/constants';
 import { Header } from '../../components/common/Header';
@@ -19,14 +20,18 @@ export const CoreMadrasasPage: React.FC = () => {
   const [selectedTenant, setSelectedTenant] = useState<MadrasaTenant | null>(null);
   const [editModules, setEditModules] = useState<MadrasaModule[]>([]);
 
-  // Madrasa Edit Details Modal State
+  // Madrasa Full Edit Details Modal State
   const [editingMadrasa, setEditingMadrasa] = useState<MadrasaTenant | null>(null);
   const [editName, setEditName] = useState('');
   const [editShortName, setEditShortName] = useState('');
+  const [editSlug, setEditSlug] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editStatus, setEditStatus] = useState<MadrasaStatus>('active');
   const [editPrincipalName, setEditPrincipalName] = useState('');
   const [editPrincipalEmail, setEditPrincipalEmail] = useState('');
+  const [editPrincipalPassword, setEditPrincipalPassword] = useState('');
   const [savingMadrasa, setSavingMadrasa] = useState(false);
 
   const loadData = async () => {
@@ -62,10 +67,14 @@ export const CoreMadrasasPage: React.FC = () => {
     setEditingMadrasa(t);
     setEditName(t.name);
     setEditShortName(t.shortName || '');
+    setEditSlug(t.slug || '');
     setEditPhone(t.phone || '');
     setEditEmail(t.email || '');
+    setEditAddress(t.address || '');
+    setEditStatus(t.status || 'active');
     setEditPrincipalName(t.principalName || '');
     setEditPrincipalEmail(t.principalEmail || '');
+    setEditPrincipalPassword('');
   };
 
   const handleSaveMadrasaDetails = async (e: React.FormEvent) => {
@@ -73,14 +82,34 @@ export const CoreMadrasasPage: React.FC = () => {
     if (!editingMadrasa) return;
     setSavingMadrasa(true);
 
+    const cleanSlug = editSlug.toLowerCase().trim();
+
     await tenantService.updateTenant(editingMadrasa.id, {
       name: editName,
       shortName: editShortName,
+      slug: cleanSlug,
       phone: editPhone,
       email: editEmail,
+      address: editAddress,
+      status: editStatus,
       principalName: editPrincipalName,
       principalEmail: editPrincipalEmail
     });
+
+    // Cascade update to Principal User Profile document & Password reset if provided
+    if (editingMadrasa.principalUid) {
+      await userService.updateUserProfile(editingMadrasa.principalUid, {
+        displayName: editPrincipalName,
+        email: editPrincipalEmail.toLowerCase().trim()
+      });
+
+      if (editPrincipalPassword.trim()) {
+        await userService.updateUserProfile(editingMadrasa.principalUid, {
+          passwordResetByAdmin: true,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
 
     setSavingMadrasa(false);
     setEditingMadrasa(null);
@@ -266,43 +295,83 @@ export const CoreMadrasasPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveMadrasaDetails} style={{ display: 'grid', gap: '14px' }}>
+            <form onSubmit={handleSaveMadrasaDetails} style={{ display: 'grid', gap: '14px', maxHeight: '75vh', overflowY: 'auto', paddingRight: '4px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Madrasa Name *</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Madrasa Name *</label>
                 <input type="text" className="input-field" value={editName} onChange={e => setEditName(e.target.value)} required />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Short Name</label>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Short Name</label>
                   <input type="text" className="input-field" value={editShortName} onChange={e => setEditShortName(e.target.value)} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Official Phone</label>
-                  <input type="text" className="input-field" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Subdomain Slug *</label>
+                  <input type="text" className="input-field" value={editSlug} onChange={e => setEditSlug(e.target.value)} required />
                 </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Official Email</label>
-                <input type="email" className="input-field" value={editEmail} onChange={e => setEditEmail(e.target.value)} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Principal Name</label>
-                  <input type="text" className="input-field" value={editPrincipalName} onChange={e => setEditPrincipalName(e.target.value)} />
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Official Phone</label>
+                  <input type="text" className="input-field" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Principal Email</label>
-                  <input type="email" className="input-field" value={editPrincipalEmail} onChange={e => setEditPrincipalEmail(e.target.value)} />
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Official Email</label>
+                  <input type="email" className="input-field" value={editEmail} onChange={e => setEditEmail(e.target.value)} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Madrasa Address</label>
+                <input type="text" className="input-field" value={editAddress} onChange={e => setEditAddress(e.target.value)} placeholder="City, Location, Address..." />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Madrasa Status</label>
+                <select className="input-field" value={editStatus} onChange={e => setEditStatus(e.target.value as MadrasaStatus)}>
+                  <option value="active">Active Subscription</option>
+                  <option value="trial">Trial Period</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '14px', marginTop: '4px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#7B2525', marginBottom: '10px' }}>
+                  🕌 Principal Administrative Credentials
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Principal Name</label>
+                    <input type="text" className="input-field" value={editPrincipalName} onChange={e => setEditPrincipalName(e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Principal Email</label>
+                    <input type="email" className="input-field" value={editPrincipalEmail} onChange={e => setEditPrincipalEmail(e.target.value)} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#991B1B', marginBottom: '4px' }}>
+                    Reset Principal Password (Optional)
+                  </label>
+                  <input 
+                    type="password" 
+                    className="input-field" 
+                    placeholder="Enter new password to reset Principal login" 
+                    value={editPrincipalPassword} 
+                    onChange={e => setEditPrincipalPassword(e.target.value)} 
+                  />
                 </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button type="button" onClick={() => setEditingMadrasa(null)} className="btn btn-outline">Cancel</button>
                 <button type="submit" disabled={savingMadrasa} className="btn btn-primary">
-                  {savingMadrasa ? 'Saving...' : 'Update Madrasa'}
+                  {savingMadrasa ? 'Saving...' : 'Update Madrasa & Principal'}
                 </button>
               </div>
             </form>
