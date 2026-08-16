@@ -10,10 +10,13 @@ import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { CalendarCheck, Save, Check } from 'lucide-react';
 
+import { classService } from '../../services/classService';
+
 export const AttendancePage: React.FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
 
+  const [availableClasses, setAvailableClasses] = useState<string[]>(CLASS_OPTIONS);
   const [selectedClass, setSelectedClass] = useState(CLASS_OPTIONS[0]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -27,7 +30,15 @@ export const AttendancePage: React.FC = () => {
   const loadAttendance = async () => {
     if (tenant?.id) {
       setLoading(true);
-      const allSt = await studentService.getStudentsByTenant(tenant.id);
+      const [allSt, cList] = await Promise.all([
+        studentService.getStudentsByTenant(tenant.id),
+        classService.getClassesByTenant(tenant.id)
+      ]);
+
+      if (cList.length > 0) {
+        const names = cList.map(c => c.name);
+        setAvailableClasses(names);
+      }
       
       // If parent -> filter only their linked children
       let filtered = allSt;
@@ -104,7 +115,7 @@ export const AttendancePage: React.FC = () => {
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>Select Class</label>
                 <select className="input-field" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
-                  {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                  {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
             )}

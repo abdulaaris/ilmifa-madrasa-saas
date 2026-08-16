@@ -1,0 +1,282 @@
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useTenant } from '../../context/TenantContext';
+import { classService } from '../../services/classService';
+import { studentService } from '../../services/studentService';
+import { MadrasaClass, Student } from '../../types';
+import { Header } from '../../components/common/Header';
+import { Sidebar } from '../../components/common/Sidebar';
+import { MobileNav } from '../../components/common/MobileNav';
+import { EmptyState } from '../../components/common/EmptyState';
+import { BookOpen, Plus, Search, X, Edit2, Trash2, Users } from 'lucide-react';
+
+export const ClassesPage: React.FC = () => {
+  const { user } = useAuth();
+  const { tenant } = useTenant();
+
+  const [classes, setClasses] = useState<MadrasaClass[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // Permission Check: Super Admin and Principal can manage classes
+  const canEdit = user?.role === 'SUPER_ADMIN' || user?.role === 'PRINCIPAL';
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingClass, setEditingClass] = useState<MadrasaClass | null>(null);
+  const [name, setName] = useState('');
+  const [section, setSection] = useState('A');
+  const [medium, setMedium] = useState('Arabic / English');
+  const [classTeacherName, setClassTeacherName] = useState('');
+  const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const loadData = async () => {
+    if (tenant?.id) {
+      setLoading(true);
+      const [cList, sList] = await Promise.all([
+        classService.getClassesByTenant(tenant.id),
+        studentService.getStudentsByTenant(tenant.id)
+      ]);
+      setClasses(cList);
+      setStudents(sList);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [tenant]);
+
+  const openCreateModal = () => {
+    setEditingClass(null);
+    setName('');
+    setSection('A');
+    setMedium('Arabic / English');
+    setClassTeacherName('');
+    setDescription('');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (c: MadrasaClass) => {
+    setEditingClass(c);
+    setName(c.name);
+    setSection(c.section || 'A');
+    setMedium(c.medium || 'Arabic / English');
+    setClassTeacherName(c.classTeacherName || '');
+    setDescription(c.description || '');
+    setIsModalOpen(true);
+  };
+
+  const handleSaveClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tenant?.id || !name) return;
+    setSaving(true);
+
+    if (editingClass) {
+      // Edit class
+      await classService.updateClass(tenant.id, editingClass.id, {
+        name,
+        section,
+        medium,
+        classTeacherName,
+        description
+      });
+    } else {
+      // Create new class
+      await classService.createClass(tenant.id, {
+        name,
+        section,
+        medium,
+        classTeacherName,
+        description
+      });
+    }
+
+    setSaving(false);
+    setIsModalOpen(false);
+    await loadData();
+  };
+
+  const handleDeleteClass = async (classId: string, className: string) => {
+    if (tenant?.id && window.confirm(`Are you sure you want to delete class "${className}"?`)) {
+      await classService.deleteClass(tenant.id, classId);
+      await loadData();
+    }
+  };
+
+  const filteredClasses = classes.filter(c => 
+    c.name.toLowerCase().includes(search.toLowerCase()) || 
+    (c.classTeacherName && c.classTeacherName.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#F7F5F2' }}>
+      <Header />
+
+      <div style={{ display: 'flex', flex: 1 }}>
+        <Sidebar />
+
+        <main style={{ flex: 1, padding: '28px 32px 80px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#252525', margin: 0 }}>
+                Class Levels Directory
+              </h1>
+              <p style={{ fontSize: '14px', color: '#666666', marginTop: '4px' }}>
+                Manage custom academic classes and sections for {tenant?.name}
+              </p>
+            </div>
+
+            {canEdit && (
+              <button onClick={openCreateModal} className="btn btn-primary">
+                <Plus size={18} />
+                <span>Add New Class</span>
+              </button>
+            )}
+          </div>
+
+          {/* Search */}
+          <div className="card" style={{ padding: '16px', marginBottom: '24px' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+              <input 
+                type="text"
+                className="input-field"
+                placeholder="Search class name, teacher..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ paddingLeft: '38px' }}
+              />
+            </div>
+          </div>
+
+          {loading ? (
+            <div style={{ padding: '48px', textAlign: 'center', color: '#666' }}>Loading classes directory...</div>
+          ) : filteredClasses.length === 0 ? (
+            <EmptyState 
+              icon="📚"
+              title="No Custom Classes Created"
+              description="Click '+ Add New Class' to create custom classes (e.g. Hifz A, Class 1, Nazira, Aalimiyyah) for your Madrasa."
+              actionLabel={canEdit ? "+ Add New Class" : undefined}
+              onAction={canEdit ? openCreateModal : undefined}
+            />
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+              {filteredClasses.map(c => {
+                const classStudentCount = students.filter(s => s.classId === c.name || s.classId === c.id).length;
+                return (
+                  <div key={c.id} className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                        <span className="badge badge-active">Section {c.section || 'A'}</span>
+                        {canEdit && (
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button onClick={() => openEditModal(c)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }} title="Edit Class">
+                              <Edit2 size={14} />
+                            </button>
+                            <button onClick={() => handleDeleteClass(c.id, c.name)} className="btn btn-ghost btn-sm" style={{ padding: '4px', color: '#DC2626' }} title="Delete Class">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#252525', margin: '0 0 6px 0' }}>
+                        {c.name}
+                      </h3>
+
+                      <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '12px' }}>
+                        Medium: <strong>{c.medium || 'Arabic / English'}</strong>
+                      </div>
+
+                      {c.classTeacherName && (
+                        <div style={{ fontSize: '13px', color: '#374151', marginBottom: '8px' }}>
+                          Class Teacher: <strong>{c.classTeacherName}</strong>
+                        </div>
+                      )}
+
+                      {c.description && (
+                        <p style={{ fontSize: '12px', color: '#666', lineHeight: '1.5', margin: '0 0 12px 0' }}>
+                          {c.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div style={{ paddingTop: '12px', borderTop: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: '#7B2525', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Users size={16} />
+                        <span>{classStudentCount} Enrolled Students</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Add / Edit Class Modal */}
+      {isModalOpen && canEdit && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '480px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
+                {editingClass ? 'Edit Class Level' : 'Add New Class Level'}
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="btn btn-ghost btn-sm">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveClass} style={{ display: 'grid', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Class Name *</label>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  placeholder="e.g. Hifz, Class 1, Nazira, Aalimiyyah" 
+                  value={name} 
+                  onChange={e => setName(e.target.value)} 
+                  required 
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Section</label>
+                  <input type="text" className="input-field" placeholder="A, B, C" value={section} onChange={e => setSection(e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Medium</label>
+                  <input type="text" className="input-field" placeholder="Arabic / English" value={medium} onChange={e => setMedium(e.target.value)} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Class Teacher Name</label>
+                <input type="text" className="input-field" placeholder="e.g. Maulana Ibrahim" value={classTeacherName} onChange={e => setClassTeacherName(e.target.value)} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Description / Notes</label>
+                <textarea className="input-field" rows={3} placeholder="Optional syllabus or room details..." value={description} onChange={e => setDescription(e.target.value)} />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
+                <button type="submit" disabled={saving} className="btn btn-primary">
+                  {saving ? 'Saving...' : editingClass ? 'Update Class' : 'Create Class'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <MobileNav />
+    </div>
+  );
+};

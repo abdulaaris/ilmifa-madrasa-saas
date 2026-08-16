@@ -180,3 +180,14 @@ export interface TimetableSlot {
   subject: string;
   teacherName: string;
 }
+
+export interface MadrasaClass {
+  id: string;
+  tenantId: string;
+  name: string;
+  section: string;
+  medium?: string;
+  classTeacherName?: string;
+  description?: string;
+  createdAt: string;
+}

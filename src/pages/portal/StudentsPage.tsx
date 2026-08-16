@@ -10,10 +10,13 @@ import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Plus, Trash2, Search, X, Edit2 } from 'lucide-react';
 
+import { classService } from '../../services/classService';
+
 export const StudentsPage: React.FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
   const [students, setStudents] = useState<Student[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<string[]>(CLASS_OPTIONS);
   const [search, setSearch] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -35,8 +38,16 @@ export const StudentsPage: React.FC = () => {
   const loadData = async () => {
     if (tenant?.id) {
       setLoading(true);
-      const list = await studentService.getStudentsByTenant(tenant.id);
-      setStudents(list);
+      const [sList, cList] = await Promise.all([
+        studentService.getStudentsByTenant(tenant.id),
+        classService.getClassesByTenant(tenant.id)
+      ]);
+      setStudents(sList);
+      if (cList.length > 0) {
+        const names = cList.map(c => c.name);
+        setAvailableClasses(names);
+        setSelectedClass(names[0]);
+      }
       setLoading(false);
     }
   };
@@ -161,7 +172,7 @@ export const StudentsPage: React.FC = () => {
 
             <select className="input-field" value={classFilter} onChange={e => setClassFilter(e.target.value)} style={{ width: 'auto' }}>
               <option value="all">All Classes</option>
-              {CLASS_OPTIONS.map(c => (
+              {availableClasses.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
@@ -263,7 +274,7 @@ export const StudentsPage: React.FC = () => {
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Class Level *</label>
                 <select className="input-field" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
-                  {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                  {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
 

@@ -99,6 +99,10 @@ export const Sidebar: React.FC = () => {
               <LayoutDashboard size={18} />
               <span>Home</span>
             </NavLink>
+            <NavLink to={`/m/${tenantSlug}/principal/classes`} style={linkStyle}>
+              <BookOpen size={18} />
+              <span>Classes</span>
+            </NavLink>
             {isModuleActive('students') && (
               <NavLink to={`/m/${tenantSlug}/principal/students`} style={linkStyle}>
                 <GraduationCap size={18} />

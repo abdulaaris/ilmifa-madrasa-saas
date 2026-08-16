@@ -11,10 +11,13 @@ import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Award, Plus, X, Edit2 } from 'lucide-react';
 
+import { classService } from '../../services/classService';
+
 export const ExamsPage: React.FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
 
+  const [availableClasses, setAvailableClasses] = useState<string[]>(CLASS_OPTIONS);
   const [exams, setExams] = useState<ExamRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,12 +46,18 @@ export const ExamsPage: React.FC = () => {
   const loadData = async () => {
     if (tenant?.id) {
       setLoading(true);
-      const [eList, sList] = await Promise.all([
+      const [eList, sList, cList] = await Promise.all([
         examService.getExamsByTenant(tenant.id),
-        studentService.getStudentsByTenant(tenant.id)
+        studentService.getStudentsByTenant(tenant.id),
+        classService.getClassesByTenant(tenant.id)
       ]);
       setExams(eList);
       setStudents(sList);
+      if (cList.length > 0) {
+        const names = cList.map(c => c.name);
+        setAvailableClasses(names);
+        setSelectedClass(names[0]);
+      }
       setLoading(false);
     }
   };
@@ -255,7 +264,7 @@ export const ExamsPage: React.FC = () => {
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Class Level</label>
                   <select className="input-field" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
-                    {CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                    {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
