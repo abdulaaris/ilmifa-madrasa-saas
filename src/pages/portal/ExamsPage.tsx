@@ -9,7 +9,7 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Award, Plus, X, Edit2 } from 'lucide-react';
+import { Award, Plus, X, Edit2, Trash2 } from 'lucide-react';
 
 import { classService } from '../../services/classService';
 
@@ -131,6 +131,14 @@ export const ExamsPage: React.FC = () => {
     await loadData();
   };
 
+  const handleDeleteExam = async (examId: string, examTitle: string) => {
+    if (tenant?.id && window.confirm(`Are you sure you want to delete examination "${examTitle}"?`)) {
+      await examService.deleteExam(tenant.id, examId);
+      setIsExamModalOpen(false);
+      await loadData();
+    }
+  };
+
   const handleSaveResult = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant?.id || !selectedExam || !selectedStudentId) return;
@@ -210,9 +218,14 @@ export const ExamsPage: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 500 }}>{ex.examDate}</span>
                         {canEdit && (
-                          <button onClick={() => openEditExamModal(ex)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }} title="Edit Exam Details">
-                            <Edit2 size={14} />
-                          </button>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button onClick={() => openEditExamModal(ex)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }} title="Edit Exam Details">
+                              <Edit2 size={14} />
+                            </button>
+                            <button onClick={() => handleDeleteExam(ex.id, ex.title)} className="btn btn-ghost btn-sm" style={{ padding: '4px', color: '#DC2626' }} title="Delete Examination">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -284,11 +297,25 @@ export const ExamsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-                <button type="button" onClick={() => setIsExamModalOpen(false)} className="btn btn-outline">Cancel</button>
-                <button type="submit" disabled={savingExam} className="btn btn-primary">
-                  {savingExam ? 'Saving...' : editingExam ? 'Update Exam' : 'Schedule Exam'}
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                {editingExam ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteExam(editingExam.id, editingExam.title)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: '#DC2626', gap: '6px' }}
+                  >
+                    <Trash2 size={16} />
+                    <span>Delete Exam</span>
+                  </button>
+                ) : <div />}
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="button" onClick={() => setIsExamModalOpen(false)} className="btn btn-outline">Cancel</button>
+                  <button type="submit" disabled={savingExam} className="btn btn-primary">
+                    {savingExam ? 'Saving...' : editingExam ? 'Update Exam' : 'Schedule Exam'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

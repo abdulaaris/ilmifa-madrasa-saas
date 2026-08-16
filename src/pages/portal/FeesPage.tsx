@@ -8,7 +8,7 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Plus, Search, X, Edit2 } from 'lucide-react';
+import { Plus, Search, X, Edit2, Trash2 } from 'lucide-react';
 
 export const FeesPage: React.FC = () => {
   const { user } = useAuth();
@@ -112,6 +112,14 @@ export const FeesPage: React.FC = () => {
     await loadData();
   };
 
+  const handleDeleteFeeRecord = async (feeId: string) => {
+    if (tenant?.id && window.confirm('Are you sure you want to delete this fee record?')) {
+      await feeService.deleteFeeRecord(tenant.id, feeId);
+      setIsModalOpen(false);
+      await loadData();
+    }
+  };
+
   const filteredFees = fees.filter(f => 
     f.studentName.toLowerCase().includes(search.toLowerCase()) || 
     f.month.toLowerCase().includes(search.toLowerCase())
@@ -200,10 +208,15 @@ export const FeesPage: React.FC = () => {
                         </td>
                         {canEdit && (
                           <td>
-                            <button onClick={() => openEditModal(f)} className="btn btn-outline btn-sm">
-                              <Edit2 size={14} />
-                              <span>Edit</span>
-                            </button>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button onClick={() => openEditModal(f)} className="btn btn-outline btn-sm">
+                                <Edit2 size={14} />
+                                <span>Edit</span>
+                              </button>
+                              <button onClick={() => handleDeleteFeeRecord(f.id)} className="btn btn-ghost btn-sm" style={{ color: '#DC2626' }} title="Delete Fee Record">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -258,11 +271,25 @@ export const FeesPage: React.FC = () => {
                 <input type="date" className="input-field" value={dueDate} onChange={e => setDueDate(e.target.value)} />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
-                <button type="submit" disabled={saving} className="btn btn-primary">
-                  {saving ? 'Saving...' : editingFee ? 'Update Record' : 'Create Invoice'}
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                {editingFee ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteFeeRecord(editingFee.id)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: '#DC2626', gap: '6px' }}
+                  >
+                    <Trash2 size={16} />
+                    <span>Delete Record</span>
+                  </button>
+                ) : <div />}
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
+                  <button type="submit" disabled={saving} className="btn btn-primary">
+                    {saving ? 'Saving...' : editingFee ? 'Update Record' : 'Create Invoice'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

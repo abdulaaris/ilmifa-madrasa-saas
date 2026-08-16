@@ -8,7 +8,7 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Plus, Search, X, Edit2 } from 'lucide-react';
+import { Plus, Search, X, Edit2, Trash2 } from 'lucide-react';
 
 export const TeachersPage: React.FC = () => {
   const { user } = useAuth();
@@ -112,6 +112,14 @@ export const TeachersPage: React.FC = () => {
     }
   };
 
+  const handleDeleteTeacher = async (teacherId: string, teacherName: string) => {
+    if (tenant?.id && window.confirm(`Are you sure you want to delete teacher account "${teacherName}"?`)) {
+      await teacherService.deleteTeacher(tenant.id, teacherId);
+      setIsModalOpen(false);
+      await loadData();
+    }
+  };
+
   const filteredTeachers = teachers.filter(t => 
     t.name.toLowerCase().includes(search.toLowerCase()) || 
     t.email.toLowerCase().includes(search.toLowerCase())
@@ -204,10 +212,15 @@ export const TeachersPage: React.FC = () => {
                         </td>
                         {canEdit && (
                           <td>
-                            <button onClick={() => openEditModal(t)} className="btn btn-outline btn-sm">
-                              <Edit2 size={14} />
-                              <span>Edit</span>
-                            </button>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button onClick={() => openEditModal(t)} className="btn btn-outline btn-sm">
+                                <Edit2 size={14} />
+                                <span>Edit</span>
+                              </button>
+                              <button onClick={() => handleDeleteTeacher(t.id, t.name)} className="btn btn-ghost btn-sm" style={{ color: '#DC2626' }} title="Delete Teacher">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -275,11 +288,25 @@ export const TeachersPage: React.FC = () => {
                 <input type="text" className="input-field" value={subjectsStr} onChange={e => setSubjectsStr(e.target.value)} />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
-                <button type="submit" disabled={creating} className="btn btn-primary">
-                  {creating ? 'Saving...' : editingTeacher ? 'Update Teacher' : 'Provision Account'}
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                {editingTeacher ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTeacher(editingTeacher.id, editingTeacher.name)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: '#DC2626', gap: '6px' }}
+                  >
+                    <Trash2 size={16} />
+                    <span>Delete Teacher</span>
+                  </button>
+                ) : <div />}
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
+                  <button type="submit" disabled={creating} className="btn btn-primary">
+                    {creating ? 'Saving...' : editingTeacher ? 'Update Teacher' : 'Provision Account'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

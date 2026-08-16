@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { ExamRecord, ExamResult } from '../types';
 
@@ -53,6 +53,19 @@ export const examService = {
       existing[idx] = { ...existing[idx], ...updates };
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+  },
+
+  async deleteExam(tenantId: string, examId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'madrasas', tenantId, 'exams', examId));
+    } catch (e) {
+      console.warn('Firestore deleteExam fallback:', e);
+    }
+
+    const localKey = `exams_${tenantId}`;
+    const existing: ExamRecord[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const filtered = existing.filter(e => e.id !== examId);
+    localStorage.setItem(localKey, JSON.stringify(filtered));
   },
 
   async saveResult(tenantId: string, data: Omit<ExamResult, 'id' | 'tenantId' | 'percentage' | 'grade' | 'createdAt'>): Promise<ExamResult> {

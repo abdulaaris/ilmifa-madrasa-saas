@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Teacher } from '../types';
 import { userService } from './userService';
@@ -72,5 +72,18 @@ export const teacherService = {
       existing[idx] = { ...existing[idx], ...updates };
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+  },
+
+  async deleteTeacher(tenantId: string, teacherId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'madrasas', tenantId, 'teachers', teacherId));
+    } catch (e) {
+      console.warn('Firestore deleteTeacher fallback:', e);
+    }
+
+    const localKey = `teachers_${tenantId}`;
+    const existing: Teacher[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const filtered = existing.filter(t => t.id !== teacherId);
+    localStorage.setItem(localKey, JSON.stringify(filtered));
   }
 };

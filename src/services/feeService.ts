@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { FeeRecord } from '../types';
 
@@ -71,5 +71,18 @@ export const feeService = {
       existing[idx] = merged;
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+  },
+
+  async deleteFeeRecord(tenantId: string, feeId: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'madrasas', tenantId, 'fees', feeId));
+    } catch (e) {
+      console.warn('Firestore deleteFeeRecord fallback:', e);
+    }
+
+    const localKey = `fees_${tenantId}`;
+    const existing: FeeRecord[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const filtered = existing.filter(f => f.id !== feeId);
+    localStorage.setItem(localKey, JSON.stringify(filtered));
   }
 };

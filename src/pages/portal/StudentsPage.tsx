@@ -289,11 +289,28 @@ export const StudentsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
-                <button type="submit" disabled={creating} className="btn btn-primary">
-                  {creating ? 'Saving...' : editingStudent ? 'Update Student' : 'Create Student'}
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                {editingStudent ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      handleDelete(editingStudent.id);
+                    }}
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: '#DC2626', gap: '6px' }}
+                  >
+                    <Trash2 size={16} />
+                    <span>Delete Student</span>
+                  </button>
+                ) : <div />}
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
+                  <button type="submit" disabled={creating} className="btn btn-primary">
+                    {creating ? 'Saving...' : editingStudent ? 'Update Student' : 'Create Student'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
