@@ -11,7 +11,7 @@ import { Building2, ArrowRight, ShieldCheck, UserCheck, HeartHandshake } from 'l
 
 export const PortalLoginPage: React.FC = () => {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
-  const { tenant, loadingTenant, resolveTenant } = useTenant();
+  const { tenant, loadingTenant, tenantError, resolveTenant } = useTenant();
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
