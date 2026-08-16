@@ -75,10 +75,14 @@ export const PortalLoginPage: React.FC = () => {
         return;
       }
 
-      // 2. Enforce Role check match if user picked specific tab
+      // 2. Strict Role tab matching validation
       if (userProfile.role !== activeRoleTab) {
-        // We can inform or auto-route to correct dashboard
-        console.warn(`User role is ${userProfile.role}, tab selected was ${activeRoleTab}`);
+        await authService.logout();
+        const tabTitle = activeRoleTab.charAt(0) + activeRoleTab.slice(1).toLowerCase();
+        const userRoleTitle = userProfile.role.charAt(0) + userProfile.role.slice(1).toLowerCase();
+        setError(`You are not a ${tabTitle}. Your account is registered as a ${userRoleTitle}. Please select the ${userRoleTitle} tab to log in.`);
+        setLoading(false);
+        return;
       }
 
       // 3. Route to proper dashboard
@@ -215,7 +219,7 @@ export const PortalLoginPage: React.FC = () => {
           marginBottom: '20px'
         }}>
           <button
-            onClick={() => setActiveRoleTab('PRINCIPAL')}
+            onClick={() => { setActiveRoleTab('PRINCIPAL'); setError(null); }}
             style={{
               padding: '8px 4px',
               border: 'none',
@@ -237,7 +241,7 @@ export const PortalLoginPage: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveRoleTab('TEACHER')}
+            onClick={() => { setActiveRoleTab('TEACHER'); setError(null); }}
             style={{
               padding: '8px 4px',
               border: 'none',
@@ -259,7 +263,7 @@ export const PortalLoginPage: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveRoleTab('PARENT')}
+            onClick={() => { setActiveRoleTab('PARENT'); setError(null); }}
             style={{
               padding: '8px 4px',
               border: 'none',
