@@ -8,7 +8,7 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Plus, Search, X, Edit2 } from 'lucide-react';
+import { Plus, Search, X, Edit2, Trash2 } from 'lucide-react';
 
 export const ParentsPage: React.FC = () => {
   const { user } = useAuth();
@@ -18,7 +18,7 @@ export const ParentsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Security Check: Only Super Admin and Principal can Edit/Create
+  // Security Check: Only Super Admin and Principal can Edit/Create/Delete
   const canEdit = user?.role === 'SUPER_ADMIN' || user?.role === 'PRINCIPAL';
 
   // Modal State
@@ -112,6 +112,14 @@ export const ParentsPage: React.FC = () => {
       const msg = err instanceof Error ? err.message : 'Failed to save parent details';
       setError(msg);
       setCreating(false);
+    }
+  };
+
+  const handleDeleteParent = async (parentId: string, parentName: string) => {
+    if (tenant?.id && window.confirm(`Are you sure you want to delete parent account "${parentName}"?`)) {
+      await parentService.deleteParent(tenant.id, parentId);
+      setIsModalOpen(false);
+      await loadData();
     }
   };
 
@@ -212,10 +220,15 @@ export const ParentsPage: React.FC = () => {
                         </td>
                         {canEdit && (
                           <td>
-                            <button onClick={() => openEditModal(p)} className="btn btn-outline btn-sm">
-                              <Edit2 size={14} />
-                              <span>Edit</span>
-                            </button>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button onClick={() => openEditModal(p)} className="btn btn-outline btn-sm" title="Edit Parent">
+                                <Edit2 size={14} />
+                                <span>Edit</span>
+                              </button>
+                              <button onClick={() => handleDeleteParent(p.id, p.name)} className="btn btn-ghost btn-sm" style={{ color: '#DC2626' }} title="Delete Parent Account">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -301,11 +314,25 @@ export const ParentsPage: React.FC = () => {
                 )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
-                <button type="submit" disabled={creating} className="btn btn-primary">
-                  {creating ? 'Saving...' : editingParent ? 'Update Parent' : 'Provision Parent Account'}
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                {editingParent ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteParent(editingParent.id, editingParent.name)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: '#DC2626', gap: '6px' }}
+                  >
+                    <Trash2 size={16} />
+                    <span>Delete Parent</span>
+                  </button>
+                ) : <div />}
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">Cancel</button>
+                  <button type="submit" disabled={creating} className="btn btn-primary">
+                    {creating ? 'Saving...' : editingParent ? 'Update Parent' : 'Provision Parent Account'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

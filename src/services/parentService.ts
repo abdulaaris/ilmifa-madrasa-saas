@@ -95,5 +95,19 @@ export const parentService = {
       existing[idx] = { ...existing[idx], ...updates };
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+  },
+
+  async deleteParent(tenantId: string, parentId: string): Promise<void> {
+    try {
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'madrasas', tenantId, 'parents', parentId));
+    } catch (e) {
+      console.warn('Firestore deleteParent fallback:', e);
+    }
+
+    const localKey = `parents_${tenantId}`;
+    const existing: Parent[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const filtered = existing.filter(p => p.id !== parentId);
+    localStorage.setItem(localKey, JSON.stringify(filtered));
   }
 };
