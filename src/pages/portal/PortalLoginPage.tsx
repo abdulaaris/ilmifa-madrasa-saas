@@ -108,16 +108,30 @@ export const PortalLoginPage: React.FC = () => {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      setError('Please enter your email address first.');
+      setError('Please enter your login Email address in the email field first.');
       return;
     }
+    setLoading(true);
+    setResetSent(false);
     try {
-      await authService.sendPasswordReset(email);
+      await authService.sendPasswordReset(email.trim());
       setResetSent(true);
       setError(null);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to send password reset email.';
+    } catch (err: any) {
+      console.warn('Password reset error:', err);
+      let msg = 'Failed to send password reset email.';
+      if (err?.code === 'auth/user-not-found') {
+        msg = `No account found with email "${email}". Please verify your email or contact your Principal.`;
+      } else if (err?.code === 'auth/invalid-email') {
+        msg = 'Invalid email address format. Please enter a valid email.';
+      } else if (err?.code === 'auth/too-many-requests') {
+        msg = 'Too many requests. Please wait a few minutes and try again.';
+      } else if (err?.message) {
+        msg = err.message.replace('Firebase: ', '');
+      }
       setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -316,8 +330,12 @@ export const PortalLoginPage: React.FC = () => {
         )}
 
         {resetSent && (
-          <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', fontSize: '13px', marginBottom: '16px' }}>
-            ✓ Password reset email sent to your address.
+          <div style={{ padding: '14px 16px', borderRadius: '12px', backgroundColor: '#ECFDF5', border: '1.5px solid #A7F3D0', color: '#065F46', fontSize: '13px', lineHeight: 1.4, marginBottom: '20px' }}>
+            <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '4px' }}>✓ Password Reset Link Dispatched!</div>
+            <div>A password reset link was sent to <strong>{email}</strong>. Please check your <strong>Inbox and Spam / Junk folder</strong>.</div>
+            <div style={{ marginTop: '8px', fontSize: '12px', color: '#047857' }}>
+              💡 <em>Can't access your email inbox? Your Principal can also reset your password directly from the Madrasa Admin Portal!</em>
+            </div>
           </div>
         )}
 
