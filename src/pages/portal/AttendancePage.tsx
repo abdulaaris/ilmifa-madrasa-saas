@@ -10,7 +10,9 @@ import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { CalendarCheck, Save, Check } from 'lucide-react';
 
+import { holidayService } from '../../services/holidayService';
 import { classService } from '../../services/classService';
+import { MadrasaClass } from '../../types';
 
 export const AttendancePage: React.FC = () => {
   const { user } = useAuth();
@@ -26,6 +28,7 @@ export const AttendancePage: React.FC = () => {
   const [savedMsg, setSavedMsg] = useState(false);
 
   const isParent = user?.role === 'PARENT';
+  const isFridayDate = holidayService.isFriday(date);
 
   const loadAttendance = async () => {
     if (tenant?.id) {
@@ -36,7 +39,7 @@ export const AttendancePage: React.FC = () => {
       ]);
 
       if (cList.length > 0) {
-        const names = cList.map(c => c.name);
+        const names = cList.map((c: MadrasaClass) => c.name);
         setAvailableClasses(names);
       }
       
@@ -44,9 +47,9 @@ export const AttendancePage: React.FC = () => {
       let filtered = allSt;
       if (isParent && user) {
         const parentStudentIds = user.studentIds || [];
-        filtered = allSt.filter(s => parentStudentIds.includes(s.id) || s.parentId === user.uid);
+        filtered = allSt.filter((s: Student) => parentStudentIds.includes(s.id) || s.parentId === user.uid);
       } else {
-        filtered = allSt.filter(s => s.classId === selectedClass);
+        filtered = allSt.filter((s: Student) => s.classId === selectedClass);
       }
 
       setStudents(filtered);
@@ -58,7 +61,7 @@ export const AttendancePage: React.FC = () => {
       } else {
         // Default all to present
         const initial: Record<string, 'present' | 'absent' | 'late'> = {};
-        filtered.forEach(s => initial[s.id] = 'present');
+        filtered.forEach((s: Student) => initial[s.id] = 'present');
         setRecords(initial);
       }
       setLoading(false);
@@ -125,6 +128,13 @@ export const AttendancePage: React.FC = () => {
               <input type="date" className="input-field" value={date} onChange={e => setDate(e.target.value)} />
             </div>
           </div>
+
+          {isFridayDate && (
+            <div className="card" style={{ padding: '16px 20px', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', fontWeight: 600, fontSize: '14px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '20px' }}>🕌</span>
+              <span>Friday (Jummah) Weekly Holiday — Attendance for {date} is automatically excused for all students.</span>
+            </div>
+          )}
 
           {/* Students Grid */}
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

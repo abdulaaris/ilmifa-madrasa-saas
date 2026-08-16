@@ -23,6 +23,7 @@ import { ClassesPage } from './pages/portal/ClassesPage';
 import { StudentsPage } from './pages/portal/StudentsPage';
 import { TeachersPage } from './pages/portal/TeachersPage';
 import { ParentsPage } from './pages/portal/ParentsPage';
+import { HolidaysPage } from './pages/portal/HolidaysPage';
 import { AttendancePage } from './pages/portal/AttendancePage';
 import { FeesPage } from './pages/portal/FeesPage';
 import { ExamsPage } from './pages/portal/ExamsPage';
@@ -56,6 +57,7 @@ export const App: React.FC = () => {
             <Route path="/m/:tenantSlug/principal/teachers" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="teachers"><TeachersPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/principal/parents" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="parents"><ParentsPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/principal/attendance" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="attendance"><AttendancePage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
+            <Route path="/m/:tenantSlug/principal/holidays" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><HolidaysPage /></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/principal/fees" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="fees"><FeesPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/principal/exams" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="exams"><ExamsPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/principal/results" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="results"><ExamsPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />

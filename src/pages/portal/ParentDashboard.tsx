@@ -6,6 +6,7 @@ import { parentService } from '../../services/parentService';
 import { attendanceService } from '../../services/attendanceService';
 import { feeService } from '../../services/feeService';
 import { examService } from '../../services/examService';
+import { holidayService } from '../../services/holidayService';
 import { Student, FeeRecord, ExamResult } from '../../types';
 import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
@@ -363,9 +364,14 @@ export const ParentDashboard: React.FC = () => {
                                     </div>
                                   )}
                                 </div>
+                              ) : holidayService.isFriday(selectedDate) ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#047857', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', padding: '12px 18px', borderRadius: '10px', fontWeight: 700, fontSize: '15px', width: '100%' }}>
+                                  <span style={{ fontSize: '20px' }}>🕌</span>
+                                  <span>Weekly Friday (Jummah) Holiday — Excused for all students.</span>
+                                </div>
                               ) : (
                                 <div style={{ padding: '16px', backgroundColor: '#FFF', borderRadius: '8px', border: '1px border #E5E7EB', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
-                                  ℹ️ No class attendance session recorded for <strong>{selectedDate}</strong> yet.
+                                  ℹ️ No class attendance session recorded for <strong>{selectedDate}</strong>.
                                 </div>
                               )}
                             </div>

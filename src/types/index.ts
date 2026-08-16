@@ -191,3 +191,13 @@ export interface MadrasaClass {
   description?: string;
   createdAt: string;
 }
+
+export interface MadrasaHoliday {
+  id: string;
+  tenantId: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  isRecurringFriday?: boolean;
+  description?: string;
+  createdAt: string;
+}

@@ -19,7 +19,8 @@ import {
   Award, 
   Bell, 
   Clock, 
-  BookOpen
+  BookOpen,
+  Calendar
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -122,10 +123,16 @@ export const Sidebar: React.FC = () => {
               </NavLink>
             )}
             {isModuleActive('attendance') && (
-              <NavLink to={`/m/${tenantSlug}/principal/attendance`} style={linkStyle}>
-                <CalendarCheck size={18} />
-                <span>Attendance</span>
-              </NavLink>
+              <>
+                <NavLink to={`/m/${tenantSlug}/principal/attendance`} style={linkStyle}>
+                  <CalendarCheck size={18} />
+                  <span>Attendance</span>
+                </NavLink>
+                <NavLink to={`/m/${tenantSlug}/principal/holidays`} style={linkStyle}>
+                  <Calendar size={18} />
+                  <span>Holidays</span>
+                </NavLink>
+              </>
             )}
             {isModuleActive('fees') && (
               <NavLink to={`/m/${tenantSlug}/principal/fees`} style={linkStyle}>
