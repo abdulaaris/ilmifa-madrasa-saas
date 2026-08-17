@@ -31,11 +31,13 @@ import { ExamsPage } from './pages/portal/ExamsPage';
 import { NoticesPage } from './pages/portal/NoticesPage';
 import { TimetablePage } from './pages/portal/TimetablePage';
 import { PWAInstallBanner } from './components/common/PWAInstallBanner';
+import { DynamicPWATheme } from './components/common/DynamicPWATheme';
 
 export const App: React.FC = () => {
   return (
     <AuthProvider>
       <TenantProvider>
+        <DynamicPWATheme />
         <BrowserRouter>
           <PWAInstallBanner />
           <Routes>

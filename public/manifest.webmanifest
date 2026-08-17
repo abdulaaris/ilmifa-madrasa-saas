@@ -1,5 +1,5 @@
 {
-  "name": "iLmiFa - Madrasa Management SaaS",
+  "name": "iLmiFa - Madrasa Management System",
   "short_name": "iLmiFa",
   "start_url": "/",
   "display": "standalone",
@@ -9,15 +9,21 @@
   "description": "Multi-tenant Madrasa Management SaaS Platform",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons.svg",
+      "src": "/pwa-512x512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
       "purpose": "any"
     }
   ]

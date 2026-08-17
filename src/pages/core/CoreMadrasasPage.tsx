@@ -34,6 +34,8 @@ export const CoreMadrasasPage: React.FC = () => {
   const [editPrincipalName, setEditPrincipalName] = useState('');
   const [editPrincipalEmail, setEditPrincipalEmail] = useState('');
   const [editPrincipalPassword, setEditPrincipalPassword] = useState('');
+  const [editLogoUrl, setEditLogoUrl] = useState('');
+  const [editPrimaryColor, setEditPrimaryColor] = useState('');
   const [savingMadrasa, setSavingMadrasa] = useState(false);
 
   const loadData = async () => {
@@ -79,6 +81,8 @@ export const CoreMadrasasPage: React.FC = () => {
     setEditEmail(t.email || '');
     setEditAddress(t.address || '');
     setEditStatus(t.status || 'active');
+    setEditLogoUrl(t.branding?.logoUrl || '');
+    setEditPrimaryColor(t.branding?.primaryColor || '#7B2525');
     
     // Set default trial expiry date if not already set (7 days from now at 23:59)
     if (t.trialEndsAt) {
@@ -112,6 +116,11 @@ export const CoreMadrasasPage: React.FC = () => {
       status: editStatus,
       principalName: editPrincipalName,
       principalEmail: editPrincipalEmail,
+      branding: {
+        ...(editingMadrasa.branding || {}),
+        primaryColor: editPrimaryColor || '#7B2525',
+        logoUrl: editLogoUrl || ''
+      },
       ...(editStatus === 'trial' ? {
         trialStartDate: editingMadrasa.trialStartDate || new Date().toISOString(),
         trialEndsAt: editTrialEndsAt
@@ -560,7 +569,38 @@ export const CoreMadrasasPage: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
+              {/* MADRASA BRANDING & PWA APP ICON */}
+              <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '14px', marginTop: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#7B2525', marginBottom: '10px' }}>
+                  🎨 Madrasa Branding & PWA App Icon
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#252525' }}>
+                      Logo URL (Installed PWA App Icon & Favicon)
+                    </label>
+                    <button type="button" onClick={() => toggleFieldUnlock('logoUrl')} className={`btn btn-xs ${unlockedFields['logoUrl'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                      {unlockedFields['logoUrl'] ? <Unlock size={12} /> : <Lock size={12} />}
+                      <span>{unlockedFields['logoUrl'] ? 'Unlocked' : 'Edit'}</span>
+                    </button>
+                  </div>
+                  <input 
+                    type="url" 
+                    className="input-field" 
+                    placeholder="https://example.com/logo.png (or SVG URL)" 
+                    value={editLogoUrl} 
+                    onChange={e => setEditLogoUrl(e.target.value)} 
+                    disabled={!unlockedFields['logoUrl']}
+                    style={{ backgroundColor: unlockedFields['logoUrl'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['logoUrl'] ? 'text' : 'not-allowed' }}
+                  />
+                  <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>
+                    💡 When uploaded, this logo will dynamically become the **installed PWA app icon** on phones and desktops!
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
                 <button type="button" onClick={() => setEditingMadrasa(null)} className="btn btn-outline">Cancel</button>
                 <button type="submit" disabled={savingMadrasa} className="btn btn-primary">
                   {savingMadrasa ? 'Saving...' : 'Update Madrasa & Principal'}
