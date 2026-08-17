@@ -9,7 +9,7 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { BookOpen, Plus, Search, X, Edit2, Trash2, Users, Check, Book } from 'lucide-react';
+import { BookOpen, Plus, Search, X, Edit2, Trash2, Users, Check, Book, Eye } from 'lucide-react';
 
 export const ClassesPage: React.FC = () => {
   const { user } = useAuth();
@@ -24,7 +24,11 @@ export const ClassesPage: React.FC = () => {
   // Permission Check: Super Admin and Principal can manage classes
   const canEdit = user?.role === 'SUPER_ADMIN' || user?.role === 'PRINCIPAL';
 
-  // Modal State
+  // Class Details & Student Roster Modal State
+  const [viewingClassDetails, setViewingClassDetails] = useState<MadrasaClass | null>(null);
+  const [rosterSearch, setRosterSearch] = useState('');
+
+  // Create / Edit Class Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<MadrasaClass | null>(null);
   const [name, setName] = useState('');
@@ -192,16 +196,31 @@ export const ClassesPage: React.FC = () => {
               {filteredClasses.map(c => {
                 const classStudentCount = students.filter(s => s.classId === c.name || s.classId === c.id).length;
                 return (
-                  <div key={c.id} className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div 
+                    key={c.id} 
+                    className="card" 
+                    onClick={() => { setViewingClassDetails(c); setRosterSearch(''); }}
+                    style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer', border: '1px solid #E5E7EB', transition: 'all 0.2s ease' }}
+                  >
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                         <span className="badge badge-active">Section {c.section || 'A'}</span>
                         {canEdit && (
                           <div style={{ display: 'flex', gap: '4px' }}>
-                            <button onClick={() => openEditModal(c)} className="btn btn-ghost btn-sm" style={{ padding: '4px' }} title="Edit Class">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); openEditModal(c); }} 
+                              className="btn btn-ghost btn-sm" 
+                              style={{ padding: '4px' }} 
+                              title="Edit Class"
+                            >
                               <Edit2 size={14} />
                             </button>
-                            <button onClick={() => handleDeleteClass(c.id, c.name)} className="btn btn-ghost btn-sm" style={{ padding: '4px', color: '#DC2626' }} title="Delete Class">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleDeleteClass(c.id, c.name); }} 
+                              className="btn btn-ghost btn-sm" 
+                              style={{ padding: '4px', color: '#DC2626' }} 
+                              title="Delete Class"
+                            >
                               <Trash2 size={14} />
                             </button>
                           </div>
@@ -250,6 +269,9 @@ export const ClassesPage: React.FC = () => {
                         <Users size={16} />
                         <span>{classStudentCount} Enrolled Students</span>
                       </div>
+                      <span style={{ fontSize: '12px', color: '#1D4ED8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Eye size={14} /> View Roster →
+                      </span>
                     </div>
                   </div>
                 );
@@ -258,6 +280,182 @@ export const ClassesPage: React.FC = () => {
           )}
         </main>
       </div>
+
+      {/* Full Class Details & Student Roster Modal */}
+      {viewingClassDetails && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ backgroundColor: '#FFF', borderRadius: '20px', maxWidth: '850px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            
+            {/* Modal Header */}
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FAF9F7', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#252525', margin: 0 }}>
+                    {viewingClassDetails.name}
+                  </h3>
+                  <span className="badge badge-active">Section {viewingClassDetails.section || 'A'}</span>
+                </div>
+                <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
+                  Class Details & Enrolled Students Roster
+                </div>
+              </div>
+              <button onClick={() => setViewingClassDetails(null)} className="btn btn-ghost btn-sm">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>
+              
+              {/* Class Summary Box */}
+              <div style={{ padding: '16px', backgroundColor: '#FAF8F5', borderRadius: '12px', border: '1px solid #EEE0CC', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', fontSize: '13px' }}>
+                  <div>
+                    <div style={{ color: '#6B7280', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>Class Teacher</div>
+                    <div style={{ fontWeight: 700, color: '#252525', marginTop: '2px' }}>
+                      {viewingClassDetails.classTeacherName || 'Not Assigned'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ color: '#6B7280', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>Medium</div>
+                    <div style={{ fontWeight: 600, color: '#374151', marginTop: '2px' }}>
+                      {viewingClassDetails.medium || 'Arabic / English'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ color: '#6B7280', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>Enrolled Students</div>
+                    <div style={{ fontWeight: 700, color: '#7B2525', marginTop: '2px' }}>
+                      {students.filter(s => s.classId === viewingClassDetails.name || s.classId === viewingClassDetails.id).length} Students
+                    </div>
+                  </div>
+                </div>
+
+                {/* Assigned Subjects */}
+                {viewingClassDetails.subjects && viewingClassDetails.subjects.length > 0 && (
+                  <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #E5E7EB' }}>
+                    <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                      Assigned Subjects ({viewingClassDetails.subjects.length}):
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {viewingClassDetails.subjects.map(sub => (
+                        <span key={sub} style={{ padding: '3px 10px', backgroundColor: '#7B2525', color: '#FFFFFF', borderRadius: '12px', fontSize: '12px', fontWeight: 600 }}>
+                          {sub}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Class Notes */}
+                {viewingClassDetails.description && (
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#4B5563', fontStyle: 'italic' }}>
+                    📝 {viewingClassDetails.description}
+                  </div>
+                )}
+              </div>
+
+              {/* Student Roster Section */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#252525', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Users size={18} color="#7B2525" />
+                  <span>Enrolled Student Roster</span>
+                </h4>
+
+                <div style={{ position: 'relative', width: '240px' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Search student in class..."
+                    value={rosterSearch}
+                    onChange={e => setRosterSearch(e.target.value)}
+                    style={{ paddingLeft: '32px', fontSize: '12px', padding: '6px 10px 6px 32px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Students Table */}
+              {(() => {
+                const classStudents = students.filter(s => 
+                  (s.classId === viewingClassDetails.name || s.classId === viewingClassDetails.id) &&
+                  (s.name.toLowerCase().includes(rosterSearch.toLowerCase()) || 
+                   (s.studentCode && s.studentCode.toLowerCase().includes(rosterSearch.toLowerCase())) ||
+                   (s.parentName && s.parentName.toLowerCase().includes(rosterSearch.toLowerCase())))
+                );
+
+                if (classStudents.length === 0) {
+                  return (
+                    <div style={{ padding: '36px', textAlign: 'center', color: '#666', backgroundColor: '#F9FAFB', borderRadius: '12px' }}>
+                      No students enrolled in <strong>{viewingClassDetails.name}</strong>.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '12px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#FAF8F5', borderBottom: '1px solid #E5E7EB', textAlign: 'left' }}>
+                          <th style={{ padding: '10px 14px', width: '90px', color: '#6B7280', fontWeight: 600 }}>Code</th>
+                          <th style={{ padding: '10px 14px', color: '#252525', fontWeight: 600 }}>Student Name</th>
+                          <th style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600 }}>Gender</th>
+                          <th style={{ padding: '10px 14px', color: '#252525', fontWeight: 600 }}>Guardian / Parent</th>
+                          <th style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600 }}>Parent Contact</th>
+                          <th style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600 }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {classStudents.map((st, idx) => (
+                          <tr key={st.id} style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
+                            <td style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600, fontSize: '12px' }}>
+                              {st.studentCode || '—'}
+                            </td>
+                            <td style={{ padding: '10px 14px', fontWeight: 700, color: '#7B2525' }}>
+                              {st.name}
+                            </td>
+                            <td style={{ padding: '10px 14px', color: '#4B5563', fontSize: '12px', textTransform: 'capitalize' }}>
+                              {st.gender || 'male'}
+                            </td>
+                            <td style={{ padding: '10px 14px', fontWeight: 600, color: '#374151' }}>
+                              {st.parentName || '—'}
+                            </td>
+                            <td style={{ padding: '10px 14px', color: '#6B7280', fontSize: '12px' }}>
+                              {st.parentPhone ? `📞 ${st.parentPhone}` : '—'}
+                            </td>
+                            <td style={{ padding: '10px 14px' }}>
+                              <span className={`badge badge-${st.status === 'active' ? 'active' : 'trial'}`} style={{ fontSize: '11px' }}>
+                                {st.status || 'Active'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+                {canEdit && (
+                  <button 
+                    type="button" 
+                    onClick={() => { const target = viewingClassDetails; setViewingClassDetails(null); openEditModal(target); }} 
+                    className="btn btn-outline"
+                  >
+                    ✏️ Edit Class Details
+                  </button>
+                )}
+                <button type="button" onClick={() => setViewingClassDetails(null)} className="btn btn-primary">
+                  Close
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Add / Edit Class Modal */}
       {isModalOpen && canEdit && (
