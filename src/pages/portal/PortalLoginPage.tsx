@@ -23,6 +23,58 @@ export const PortalLoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
 
+  // Secret 5-Tap Super Admin Access Override
+  const [logoTapCount, setLogoTapCount] = useState(0);
+  const [showSecretModal, setShowSecretModal] = useState(false);
+  const [secretEmail, setSecretEmail] = useState('');
+  const [secretPassword, setSecretPassword] = useState('');
+  const [secretLoading, setSecretLoading] = useState(false);
+  const [secretError, setSecretError] = useState<string | null>(null);
+
+  const handleLogoTap = () => {
+    setLogoTapCount(prev => {
+      const next = prev + 1;
+      if (next >= 5) {
+        setShowSecretModal(true);
+        setSecretError(null);
+        return 0;
+      }
+      return next;
+    });
+
+    // Reset tap counter after 2 seconds of inactivity
+    clearTimeout((window as any)._logoTapTimer);
+    (window as any)._logoTapTimer = setTimeout(() => {
+      setLogoTapCount(0);
+    }, 2000);
+  };
+
+  const handleSecretAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!secretEmail || !secretPassword) {
+      setSecretError('Please enter Super Admin Email and Password.');
+      return;
+    }
+    setSecretLoading(true);
+    setSecretError(null);
+
+    try {
+      const userProfile = await login(secretEmail, secretPassword);
+      if (userProfile.role !== 'SUPER_ADMIN') {
+        await authService.logout();
+        setSecretError('Access Restricted. Only Super Admin credentials can unlock this secret override.');
+        setSecretLoading(false);
+        return;
+      }
+      // Super Admin authenticated! Navigate directly to this Madrasa's Principal Portal!
+      setShowSecretModal(false);
+      navigate(`/m/${tenant?.slug}/principal`);
+    } catch (err: unknown) {
+      setSecretError(formatAuthErrorMessage(err, 'iLmiFa Core Admin'));
+      setSecretLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (tenantSlug) {
       resolveTenant(tenantSlug);
@@ -180,22 +232,29 @@ export const PortalLoginPage: React.FC = () => {
         boxShadow: '0 12px 36px rgba(0,0,0,0.06)',
         border: '1px solid #E2DDD5'
       }}>
-        {/* Madrasa Branding Header */}
+        {/* Madrasa Branding Header (5 Taps Triggers Secret Super Admin Access) */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '16px',
-            backgroundColor: primaryColor,
-            color: '#FFFFFF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 14px',
-            fontSize: '28px',
-            fontWeight: 'bold',
-            boxShadow: `0 8px 20px ${primaryColor}33`
-          }}>
+          <div 
+            onClick={handleLogoTap}
+            title="Double tap for Madrasa Portal"
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '16px',
+              backgroundColor: primaryColor,
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 14px',
+              fontSize: '28px',
+              fontWeight: 'bold',
+              boxShadow: `0 8px 20px ${primaryColor}33`,
+              cursor: 'pointer',
+              userSelect: 'none',
+              transition: 'transform 0.15s ease'
+            }}
+          >
             {tenant?.branding?.logoUrl ? (
               <img src={tenant.branding.logoUrl} alt={tenant.name} style={{ width: '100%', height: '100%', borderRadius: '16px', objectFit: 'cover' }} />
             ) : (
@@ -203,7 +262,10 @@ export const PortalLoginPage: React.FC = () => {
             )}
           </div>
 
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#252525', margin: 0 }}>
+          <h1 
+            onClick={handleLogoTap}
+            style={{ fontSize: '22px', fontWeight: 700, color: '#252525', margin: 0, cursor: 'pointer', userSelect: 'none' }}
+          >
             {tenant?.name}
           </h1>
           <div style={{ fontSize: '13px', fontWeight: 600, color: primaryColor, marginTop: '4px' }}>
@@ -212,6 +274,12 @@ export const PortalLoginPage: React.FC = () => {
           <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>
             Powered by <strong>iLmiFa Core</strong>
           </div>
+
+          {logoTapCount > 0 && logoTapCount < 5 && (
+            <div style={{ fontSize: '11px', color: '#D97706', fontWeight: 700, marginTop: '8px', animation: 'pulse 1s infinite' }}>
+              ⚡ Secret Admin Access: {5 - logoTapCount} more taps...
+            </div>
+          )}
         </div>
 
         {/* Role Tabs */}
@@ -375,6 +443,123 @@ export const PortalLoginPage: React.FC = () => {
         {/* PWA Installation Card */}
         <InstallPwaCard />
       </div>
+
+      {/* Secret Super Admin Access Modal (Triggered by 5 taps on Logo) */}
+      {showSecretModal && (
+        <div 
+          className="modal-overlay" 
+          style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            backgroundColor: 'rgba(0,0,0,0.75)', 
+            backdropFilter: 'blur(6px)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            zIndex: 9999, 
+            padding: '16px' 
+          }}
+        >
+          <div 
+            className="modal-card" 
+            style={{ 
+              backgroundColor: '#1E1E1E', 
+              color: '#FFFFFF', 
+              borderRadius: '24px', 
+              maxWidth: '440px', 
+              width: '100%', 
+              padding: '28px', 
+              boxShadow: '0 25px 50px rgba(0,0,0,0.5)', 
+              border: '1px solid #7B2525' 
+            }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div 
+                style={{ 
+                  width: '56px', 
+                  height: '56px', 
+                  borderRadius: '16px', 
+                  backgroundColor: '#7B2525', 
+                  color: '#FFFFFF', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  marginBottom: '12px',
+                  boxShadow: '0 8px 20px rgba(123, 37, 37, 0.4)'
+                }}
+              >
+                <ShieldCheck size={30} />
+              </div>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#F3F4F6', margin: 0 }}>
+                Super Admin Secret Override
+              </h2>
+              <p style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '6px', lineHeight: 1.4 }}>
+                Authenticate as Super Admin to directly inspect and manage <strong>{tenant?.name}</strong>.
+              </p>
+            </div>
+
+            {secretError && (
+              <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#450A0A', border: '1px solid #991B1B', color: '#FCA5A5', fontSize: '13px', marginBottom: '16px', lineHeight: 1.4 }}>
+                ⚠️ {secretError}
+              </div>
+            )}
+
+            <form onSubmit={handleSecretAdminLogin} style={{ display: 'grid', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#D1D5DB', marginBottom: '6px' }}>
+                  Super Admin Email
+                </label>
+                <input 
+                  type="email" 
+                  className="input-field" 
+                  placeholder="admin@ilmifa.com" 
+                  value={secretEmail} 
+                  onChange={e => setSecretEmail(e.target.value)} 
+                  required 
+                  style={{ backgroundColor: '#2D2D2D', borderColor: '#404040', color: '#FFF' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#D1D5DB', marginBottom: '6px' }}>
+                  Super Admin Password
+                </label>
+                <input 
+                  type="password" 
+                  className="input-field" 
+                  placeholder="••••••••••••" 
+                  value={secretPassword} 
+                  onChange={e => setSecretPassword(e.target.value)} 
+                  required 
+                  style={{ backgroundColor: '#2D2D2D', borderColor: '#404040', color: '#FFF' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '8px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setShowSecretModal(false)} 
+                  className="btn btn-outline" 
+                  style={{ borderColor: '#4B5563', color: '#D1D5DB', borderRadius: '12px', padding: '12px' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={secretLoading} 
+                  className="btn btn-primary" 
+                  style={{ backgroundColor: '#7B2525', borderColor: '#7B2525', color: '#FFF', borderRadius: '12px', padding: '12px', fontWeight: 700, boxShadow: '0 4px 14px rgba(123, 37, 37, 0.4)' }}
+                >
+                  {secretLoading ? 'Unlocking...' : '🔓 Unlock Portal'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

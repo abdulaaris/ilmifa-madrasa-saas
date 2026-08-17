@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
-import { LogOut, User, Building2, Shield, Menu } from 'lucide-react';
+import { LogOut, User, Building2, Shield, Menu, ArrowLeft } from 'lucide-react';
 import { MobileDrawer } from './MobileDrawer';
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const { tenant } = useTenant();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const isCorePage = location.pathname.startsWith('/core');
 
   const handleLogout = async () => {
     await logout();
@@ -53,7 +58,8 @@ export const Header: React.FC = () => {
             <Menu size={20} />
           </button>
 
-          {user?.role === 'SUPER_ADMIN' ? (
+          {isCorePage ? (
+            /* Super Admin Core Header */
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{
                 width: '32px',
@@ -75,6 +81,7 @@ export const Header: React.FC = () => {
               </div>
             </div>
           ) : (
+            /* Customer Madrasa Header (Supports Super Admin Inspection Mode) */
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {tenant?.branding?.logoUrl ? (
                 <img src={tenant.branding.logoUrl} alt={tenant.name} style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover' }} />
@@ -97,7 +104,12 @@ export const Header: React.FC = () => {
                   {tenant?.name || 'Madrasa Portal'}
                 </div>
                 <div style={{ fontSize: '11px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>{tenant?.id}</span> • <span style={{ textTransform: 'capitalize', fontWeight: 500 }}>{user?.role.toLowerCase()}</span>
+                  <span>{tenant?.id}</span> • 
+                  {user?.role === 'SUPER_ADMIN' ? (
+                    <span style={{ fontWeight: 700, color: '#7B2525' }}>👑 Super Admin (Principal Mode)</span>
+                  ) : (
+                    <span style={{ textTransform: 'capitalize', fontWeight: 500 }}>{user?.role.toLowerCase()}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -105,23 +117,46 @@ export const Header: React.FC = () => {
         </div>
 
         {/* User Info & Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Quick Exit to Core Dashboard button for Super Admin when inspecting a tenant */}
+          {user?.role === 'SUPER_ADMIN' && !isCorePage && (
+            <button
+              onClick={() => navigate('/core/dashboard')}
+              className="btn btn-outline btn-sm"
+              style={{
+                gap: '6px',
+                borderColor: '#7B2525',
+                color: '#7B2525',
+                backgroundColor: 'rgba(123, 37, 37, 0.05)',
+                fontWeight: 600
+              }}
+              title="Return to Super Admin Dashboard"
+            >
+              <ArrowLeft size={14} />
+              <span>Exit to Core</span>
+            </button>
+          )}
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className="desktop-only">
             <div style={{
               width: '32px',
               height: '32px',
               borderRadius: '50%',
-              backgroundColor: '#F3F4F6',
+              backgroundColor: user?.role === 'SUPER_ADMIN' ? 'rgba(123, 37, 37, 0.1)' : '#F3F4F6',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#4B5563'
+              color: user?.role === 'SUPER_ADMIN' ? '#7B2525' : '#4B5563'
             }}>
               {user?.role === 'SUPER_ADMIN' ? <Shield size={16} /> : <User size={16} />}
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#1F2937' }}>{user?.displayName || user?.email}</div>
-              <div style={{ fontSize: '11px', color: '#6B7280' }}>{user?.email}</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#1F2937' }}>
+                {user?.displayName || user?.email}
+              </div>
+              <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                {user?.role === 'SUPER_ADMIN' ? '👑 Super Admin' : user?.email}
+              </div>
             </div>
           </div>
 

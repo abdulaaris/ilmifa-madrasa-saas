@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { NavLink, useParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { moduleService } from '../../services/moduleService';
@@ -26,6 +26,7 @@ import {
 export const Sidebar: React.FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
+  const location = useLocation();
   const params = useParams();
   const tenantSlug = params.tenantSlug || tenant?.slug || '';
 
@@ -61,8 +62,8 @@ export const Sidebar: React.FC = () => {
       minHeight: 'calc(100vh - 64px)'
     }}>
       <nav style={{ flex: 1 }}>
-        {/* SUPER ADMIN NAVIGATION */}
-        {user.role === 'SUPER_ADMIN' && (
+        {/* SUPER ADMIN CORE NAVIGATION (When on /core/*) */}
+        {user.role === 'SUPER_ADMIN' && location.pathname.startsWith('/core') && (
           <div>
             <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0 12px 8px' }}>
               Platform Core
@@ -90,11 +91,11 @@ export const Sidebar: React.FC = () => {
           </div>
         )}
 
-        {/* PRINCIPAL NAVIGATION */}
-        {user.role === 'PRINCIPAL' && (
+        {/* SUPER ADMIN INSPECTION OR PRINCIPAL NAVIGATION (When on /m/:tenantSlug/*) */}
+        {((user.role === 'SUPER_ADMIN' && location.pathname.startsWith('/m/')) || user.role === 'PRINCIPAL') && (
           <div>
             <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0 12px 8px' }}>
-              Madrasa Admin
+              {user.role === 'SUPER_ADMIN' ? '👑 Principal App (Admin Mode)' : 'Madrasa Admin'}
             </div>
             <NavLink to={`/m/${tenantSlug}/principal`} end style={linkStyle}>
               <LayoutDashboard size={18} />
@@ -141,13 +142,13 @@ export const Sidebar: React.FC = () => {
             {isModuleActive('fees') && (
               <NavLink to={`/m/${tenantSlug}/principal/fees`} style={linkStyle}>
                 <CreditCard size={18} />
-                <span>Fees</span>
+                <span>Fees Management</span>
               </NavLink>
             )}
             {isModuleActive('exams') && (
               <NavLink to={`/m/${tenantSlug}/principal/exams`} style={linkStyle}>
                 <Award size={18} />
-                <span>Exams & Results</span>
+                <span>Exams & Marks</span>
               </NavLink>
             )}
             {isModuleActive('notices') && (
