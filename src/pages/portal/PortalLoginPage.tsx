@@ -179,41 +179,6 @@ export const PortalLoginPage: React.FC = () => {
       backgroundColor: '#F7F5F2',
       padding: '24px 16px'
     }}>
-      {user?.role === 'SUPER_ADMIN' && (
-        <div style={{
-          maxWidth: '440px',
-          width: '100%',
-          backgroundColor: '#EFF6FF',
-          border: '1px solid #BFDBFE',
-          borderRadius: '14px',
-          padding: '14px 16px',
-          marginBottom: '16px',
-          fontSize: '13px',
-          color: '#1E40AF'
-        }}>
-          <div style={{ fontWeight: 600, marginBottom: '4px' }}>⚡ You are logged in as Super Admin</div>
-          <div style={{ color: '#3B82F6', fontSize: '12px', marginBottom: '10px' }}>
-            You can inspect this Madrasa's portal or logout to test Principal/Teacher/Parent logins.
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button 
-              onClick={() => navigate(`/m/${tenant?.slug}/principal`)} 
-              className="btn btn-primary btn-sm"
-              style={{ backgroundColor: '#2563EB', border: 'none', fontSize: '12px' }}
-            >
-              Inspect Principal Portal
-            </button>
-            <button 
-              onClick={async () => { await authService.logout(); window.location.reload(); }} 
-              className="btn btn-outline btn-sm"
-              style={{ borderColor: '#93C5FD', color: '#1E40AF', fontSize: '12px' }}
-            >
-              Logout Super Admin
-            </button>
-          </div>
-        </div>
-      )}
-
       <div style={{
         maxWidth: '440px',
         width: '100%',
