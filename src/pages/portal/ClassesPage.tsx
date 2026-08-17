@@ -3,12 +3,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useTenant } from '../../context/TenantContext';
 import { classService } from '../../services/classService';
 import { studentService } from '../../services/studentService';
-import { MadrasaClass, Student } from '../../types';
+import { subjectService } from '../../services/subjectService';
+import { MadrasaClass, Student, MadrasaSubject } from '../../types';
 import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { BookOpen, Plus, Search, X, Edit2, Trash2, Users } from 'lucide-react';
+import { BookOpen, Plus, Search, X, Edit2, Trash2, Users, Check, Book } from 'lucide-react';
 
 export const ClassesPage: React.FC = () => {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ export const ClassesPage: React.FC = () => {
 
   const [classes, setClasses] = useState<MadrasaClass[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<MadrasaSubject[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -30,17 +32,21 @@ export const ClassesPage: React.FC = () => {
   const [medium, setMedium] = useState('Arabic / English');
   const [classTeacherName, setClassTeacherName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [customSubjectInput, setCustomSubjectInput] = useState('');
   const [saving, setSaving] = useState(false);
 
   const loadData = async () => {
     if (tenant?.id) {
       setLoading(true);
-      const [cList, sList] = await Promise.all([
+      const [cList, sList, subList] = await Promise.all([
         classService.getClassesByTenant(tenant.id),
-        studentService.getStudentsByTenant(tenant.id)
+        studentService.getStudentsByTenant(tenant.id),
+        subjectService.getSubjectsByTenant(tenant.id)
       ]);
       setClasses(cList);
       setStudents(sList);
+      setAvailableSubjects(subList);
       setLoading(false);
     }
   };
@@ -56,6 +62,8 @@ export const ClassesPage: React.FC = () => {
     setMedium('Arabic / English');
     setClassTeacherName('');
     setDescription('');
+    setSelectedSubjects([]);
+    setCustomSubjectInput('');
     setIsModalOpen(true);
   };
 
@@ -66,7 +74,22 @@ export const ClassesPage: React.FC = () => {
     setMedium(c.medium || 'Arabic / English');
     setClassTeacherName(c.classTeacherName || '');
     setDescription(c.description || '');
+    setSelectedSubjects(c.subjects || []);
+    setCustomSubjectInput('');
     setIsModalOpen(true);
+  };
+
+  const toggleSubjectSelect = (subName: string) => {
+    setSelectedSubjects(prev =>
+      prev.includes(subName) ? prev.filter(s => s !== subName) : [...prev, subName]
+    );
+  };
+
+  const handleAddCustomSubject = () => {
+    if (customSubjectInput.trim() && !selectedSubjects.includes(customSubjectInput.trim())) {
+      setSelectedSubjects(prev => [...prev, customSubjectInput.trim()]);
+      setCustomSubjectInput('');
+    }
   };
 
   const handleSaveClass = async (e: React.FormEvent) => {
@@ -81,7 +104,8 @@ export const ClassesPage: React.FC = () => {
         section,
         medium,
         classTeacherName,
-        description
+        description,
+        subjects: selectedSubjects
       });
     } else {
       // Create new class
@@ -90,7 +114,8 @@ export const ClassesPage: React.FC = () => {
         section,
         medium,
         classTeacherName,
-        description
+        description,
+        subjects: selectedSubjects
       });
     }
 
@@ -197,6 +222,22 @@ export const ClassesPage: React.FC = () => {
                         </div>
                       )}
 
+                      {c.subjects && c.subjects.length > 0 && (
+                        <div style={{ marginBottom: '12px' }}>
+                          <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Book size={12} />
+                            <span>Assigned Subjects:</span>
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {c.subjects.map(s => (
+                              <span key={s} style={{ padding: '2px 8px', backgroundColor: '#F3F4F6', color: '#374151', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {c.description && (
                         <p style={{ fontSize: '12px', color: '#666', lineHeight: '1.5', margin: '0 0 12px 0' }}>
                           {c.description}
@@ -221,7 +262,7 @@ export const ClassesPage: React.FC = () => {
       {/* Add / Edit Class Modal */}
       {isModalOpen && canEdit && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '480px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '520px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
                 {editingClass ? 'Edit Class Level' : 'Add New Class Level'}
@@ -260,9 +301,84 @@ export const ClassesPage: React.FC = () => {
                 <input type="text" className="input-field" placeholder="e.g. Maulana Ibrahim" value={classTeacherName} onChange={e => setClassTeacherName(e.target.value)} />
               </div>
 
+              {/* Select Subjects Taught in Class */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: '#252525' }}>
+                  Assign Subjects Taught in this Class
+                </label>
+                
+                {availableSubjects.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px', backgroundColor: '#FAF9F7', borderRadius: '10px', border: '1px solid #E5E7EB', maxHeight: '130px', overflowY: 'auto' }}>
+                    {availableSubjects.map(sub => {
+                      const isSelected = selectedSubjects.includes(sub.name);
+                      return (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => toggleSubjectSelect(sub.name)}
+                          style={{
+                            padding: '5px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            border: isSelected ? '1.5px solid #7B2525' : '1px solid #D1D5DB',
+                            backgroundColor: isSelected ? '#7B2525' : '#FFFFFF',
+                            color: isSelected ? '#FFFFFF' : '#374151',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {isSelected && <Check size={13} />}
+                          <span>{sub.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '6px' }}>
+                    No pre-created subjects found in Subjects Directory. Add subjects manually below:
+                  </div>
+                )}
+
+                {/* Custom subject manual add */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Add custom subject (e.g. Tajweed)..."
+                    value={customSubjectInput}
+                    onChange={e => setCustomSubjectInput(e.target.value)}
+                    style={{ fontSize: '12px', padding: '6px 10px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomSubject}
+                    className="btn btn-outline btn-sm"
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    + Add
+                  </button>
+                </div>
+
+                {selectedSubjects.length > 0 && (
+                  <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', color: '#6B7280', alignSelf: 'center' }}>Selected:</span>
+                    {selectedSubjects.map(s => (
+                      <span key={s} style={{ padding: '2px 8px', backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: '12px', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {s}
+                        <X size={12} style={{ cursor: 'pointer' }} onClick={() => toggleSubjectSelect(s)} />
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Description / Notes</label>
-                <textarea className="input-field" rows={3} placeholder="Optional syllabus or room details..." value={description} onChange={e => setDescription(e.target.value)} />
+                <textarea className="input-field" rows={2} placeholder="Optional syllabus or room details..." value={description} onChange={e => setDescription(e.target.value)} />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>

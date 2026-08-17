@@ -194,6 +194,7 @@ export interface MadrasaClass {
   medium?: string;
   classTeacherName?: string;
   description?: string;
+  subjects?: string[];
   createdAt: string;
 }
 
