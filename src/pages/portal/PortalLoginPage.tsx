@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTenant } from '../../context/TenantContext';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
+import { formatAuthErrorMessage } from '../../utils/authErrorUtils';
 import { InstallPwaCard } from '../../components/common/InstallPwaCard';
 import { LoadingScreen } from '../../components/common/LoadingScreen';
 import { TenantNotFound } from './TenantNotFound';
@@ -100,7 +101,7 @@ export const PortalLoginPage: React.FC = () => {
       else if (userProfile.role === 'PARENT') navigate(`/m/${tenant.slug}/parent`);
 
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Invalid login credentials.';
+      const msg = formatAuthErrorMessage(err, tenant?.name);
       setError(msg);
       setLoading(false);
     }
@@ -117,18 +118,9 @@ export const PortalLoginPage: React.FC = () => {
       await authService.sendPasswordReset(email.trim());
       setResetSent(true);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Password reset error:', err);
-      let msg = 'Failed to send password reset email.';
-      if (err?.code === 'auth/user-not-found') {
-        msg = `No account found with email "${email}". Please verify your email or contact your Principal.`;
-      } else if (err?.code === 'auth/invalid-email') {
-        msg = 'Invalid email address format. Please enter a valid email.';
-      } else if (err?.code === 'auth/too-many-requests') {
-        msg = 'Too many requests. Please wait a few minutes and try again.';
-      } else if (err?.message) {
-        msg = err.message.replace('Firebase: ', '');
-      }
+      const msg = formatAuthErrorMessage(err, tenant?.name);
       setError(msg);
     } finally {
       setLoading(false);

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
+import { formatAuthErrorMessage } from '../../utils/authErrorUtils';
 import { Shield, ArrowRight, KeyRound } from 'lucide-react';
 
 export const CoreLoginPage: React.FC = () => {
@@ -33,7 +34,7 @@ export const CoreLoginPage: React.FC = () => {
       }
       navigate('/core/dashboard');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Invalid login credentials.';
+      const msg = formatAuthErrorMessage(err, 'iLmiFa Core Admin');
       setError(msg);
       setLoading(false);
     }
@@ -49,7 +50,7 @@ export const CoreLoginPage: React.FC = () => {
       setResetSent(true);
       setError(null);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to send password reset email.';
+      const msg = formatAuthErrorMessage(err, 'iLmiFa Core Admin');
       setError(msg);
     }
   };
