@@ -69,7 +69,8 @@ export const examService = {
   },
 
   async saveResult(tenantId: string, data: Omit<ExamResult, 'id' | 'tenantId' | 'percentage' | 'grade' | 'createdAt'>): Promise<ExamResult> {
-    const id = `res_${data.examId}_${data.studentId}`;
+    const subSlug = (data.subject || 'general').replace(/[^a-zA-Z0-9]/g, '_');
+    const id = `res_${data.examId}_${data.studentId}_${subSlug}`;
     const percentage = Math.round((data.obtainedMarks / data.maxMarks) * 100);
     
     let grade = 'F';

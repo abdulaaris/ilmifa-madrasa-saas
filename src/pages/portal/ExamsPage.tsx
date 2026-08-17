@@ -42,7 +42,8 @@ export const ExamsPage: React.FC = () => {
 
   // Excel Sheet Bulk Result Entry Modal State
   const [selectedExam, setSelectedExam] = useState<ExamRecord | null>(null);
-  const [bulkMarks, setBulkMarks] = useState<Record<string, { obtainedMarks: number | ''; remarks: string }>>({});
+  const [activeSubjectTab, setActiveSubjectTab] = useState('');
+  const [bulkMarks, setBulkMarks] = useState<Record<string, Record<string, { obtainedMarks: number | ''; remarks: string }>>>({});
   const [loadingExamStudents, setLoadingExamStudents] = useState(false);
   const [savingBulkResults, setSavingBulkResults] = useState(false);
   const [bulkSuccessMessage, setBulkSuccessMessage] = useState<string | null>(null);
@@ -160,23 +161,33 @@ export const ExamsPage: React.FC = () => {
     setLoadingExamStudents(true);
     setBulkSuccessMessage(null);
 
+    const examSubs = ex.subjects && ex.subjects.length > 0 
+      ? ex.subjects 
+      : ex.subject ? ex.subject.split(', ').map(s => s.trim()) : ['General'];
+    
+    const defaultTab = examSubs[0] || 'General';
+    setActiveSubjectTab(defaultTab);
+
     let existingResults: ExamResult[] = [];
     if (tenant?.id) {
       existingResults = await examService.getResultsByExam(tenant.id, ex.id);
     }
 
     const classStudents = students.filter(s => s.classId === ex.classId);
-    const initialMap: Record<string, { obtainedMarks: number | ''; remarks: string }> = {};
+    const fullMap: Record<string, Record<string, { obtainedMarks: number | ''; remarks: string }>> = {};
 
-    classStudents.forEach(s => {
-      const foundRes = existingResults.find(r => r.studentId === s.id);
-      initialMap[s.id] = {
-        obtainedMarks: foundRes !== undefined ? foundRes.obtainedMarks : '',
-        remarks: foundRes?.remarks || ''
-      };
+    examSubs.forEach(sub => {
+      fullMap[sub] = {};
+      classStudents.forEach(s => {
+        const foundRes = existingResults.find(r => r.studentId === s.id && (r.subject === sub || (!r.subject && sub === 'General')));
+        fullMap[sub][s.id] = {
+          obtainedMarks: foundRes !== undefined && foundRes.obtainedMarks !== undefined ? foundRes.obtainedMarks : '',
+          remarks: foundRes?.remarks || ''
+        };
+      });
     });
 
-    setBulkMarks(initialMap);
+    setBulkMarks(fullMap);
     setLoadingExamStudents(false);
   };
 
@@ -184,9 +195,12 @@ export const ExamsPage: React.FC = () => {
     const num = val === '' ? '' : Math.min(selectedExam?.maxMarks || 100, Math.max(0, Number(val)));
     setBulkMarks(prev => ({
       ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        obtainedMarks: num
+      [activeSubjectTab]: {
+        ...(prev[activeSubjectTab] || {}),
+        [studentId]: {
+          ...(prev[activeSubjectTab]?.[studentId] || { remarks: '' }),
+          obtainedMarks: num
+        }
       }
     }));
   };
@@ -194,21 +208,29 @@ export const ExamsPage: React.FC = () => {
   const handleRemarkChange = (studentId: string, val: string) => {
     setBulkMarks(prev => ({
       ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        remarks: val
+      [activeSubjectTab]: {
+        ...(prev[activeSubjectTab] || {}),
+        [studentId]: {
+          ...(prev[activeSubjectTab]?.[studentId] || { obtainedMarks: '' }),
+          remarks: val
+        }
       }
     }));
   };
 
   const handleSetAllDefaultMarks = (defaultScore: number) => {
-    const updated = { ...bulkMarks };
-    Object.keys(updated).forEach(sId => {
-      if (updated[sId].obtainedMarks === '') {
-        updated[sId] = { ...updated[sId], obtainedMarks: defaultScore };
-      }
+    setBulkMarks(prev => {
+      const subMap = { ...(prev[activeSubjectTab] || {}) };
+      Object.keys(subMap).forEach(sId => {
+        if (subMap[sId].obtainedMarks === '') {
+          subMap[sId] = { ...subMap[sId], obtainedMarks: defaultScore };
+        }
+      });
+      return {
+        ...prev,
+        [activeSubjectTab]: subMap
+      };
     });
-    setBulkMarks(updated);
   };
 
   const handleSaveExam = async (e: React.FormEvent) => {
@@ -261,23 +283,30 @@ export const ExamsPage: React.FC = () => {
     setSavingBulkResults(true);
 
     const classStudents = students.filter(s => s.classId === selectedExam.classId);
+    const examSubs = selectedExam.subjects && selectedExam.subjects.length > 0 
+      ? selectedExam.subjects 
+      : selectedExam.subject ? selectedExam.subject.split(', ').map(s => s.trim()) : ['General'];
+
     const recordsToSave: Array<Omit<ExamResult, 'id' | 'tenantId' | 'percentage' | 'grade' | 'createdAt'>> = [];
 
-    classStudents.forEach(s => {
-      const markEntry = bulkMarks[s.id];
-      if (markEntry && markEntry.obtainedMarks !== '') {
-        recordsToSave.push({
-          examId: selectedExam.id,
-          examTitle: selectedExam.title,
-          studentId: s.id,
-          studentName: s.name,
-          classId: selectedExam.classId,
-          subject: selectedExam.subject,
-          maxMarks: selectedExam.maxMarks,
-          obtainedMarks: Number(markEntry.obtainedMarks),
-          remarks: markEntry.remarks || ''
-        });
-      }
+    examSubs.forEach(sub => {
+      const subMap = bulkMarks[sub] || {};
+      classStudents.forEach(s => {
+        const markEntry = subMap[s.id];
+        if (markEntry && markEntry.obtainedMarks !== '') {
+          recordsToSave.push({
+            examId: selectedExam.id,
+            examTitle: selectedExam.title,
+            studentId: s.id,
+            studentName: s.name,
+            classId: selectedExam.classId,
+            subject: sub,
+            maxMarks: selectedExam.maxMarks,
+            obtainedMarks: Number(markEntry.obtainedMarks),
+            remarks: markEntry.remarks || ''
+          });
+        }
+      });
     });
 
     if (recordsToSave.length === 0) {
@@ -288,7 +317,7 @@ export const ExamsPage: React.FC = () => {
 
     await examService.saveBulkResults(tenant.id, recordsToSave);
     setSavingBulkResults(false);
-    setBulkSuccessMessage(`✓ Marks saved successfully for ${recordsToSave.length} students!`);
+    setBulkSuccessMessage(`✓ Marks saved successfully for ${recordsToSave.length} student subject records!`);
     setTimeout(() => {
       setBulkSuccessMessage(null);
       setSelectedExam(null);
@@ -581,20 +610,63 @@ export const ExamsPage: React.FC = () => {
       {/* Excel Sheet Quick Student Marks Entry Modal */}
       {selectedExam && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', borderRadius: '20px', maxWidth: '840px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+          <div style={{ backgroundColor: '#FFF', borderRadius: '20px', maxWidth: '860px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             {/* Modal Header */}
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FAF9F7', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
+            <div style={{ padding: '18px 24px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FAF9F7', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
               <div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
                   📊 Excel Sheet Marks Entry — {selectedExam.title}
                 </h3>
                 <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
-                  Class: <strong>{selectedExam.classId}</strong> • Subject: <strong>{selectedExam.subject}</strong> • Max Marks: <strong>{selectedExam.maxMarks}</strong>
+                  Class: <strong>{selectedExam.classId}</strong> • Active Subject: <strong style={{ color: '#7B2525' }}>📖 {activeSubjectTab}</strong> • Max Marks: <strong>{selectedExam.maxMarks}</strong>
                 </div>
               </div>
               <button onClick={() => setSelectedExam(null)} className="btn btn-ghost btn-sm">
                 <X size={20} />
               </button>
+            </div>
+
+            {/* Subject Navigation Tabs Bar */}
+            <div style={{ display: 'flex', gap: '6px', padding: '10px 24px 0', backgroundColor: '#FAF9F7', borderBottom: '1px solid #E5E7EB', overflowX: 'auto' }}>
+              {(selectedExam.subjects && selectedExam.subjects.length > 0 
+                ? selectedExam.subjects 
+                : selectedExam.subject ? selectedExam.subject.split(', ').map(s => s.trim()) : ['General']
+              ).map(subName => {
+                const isActive = activeSubjectTab === subName;
+                const subMap = bulkMarks[subName] || {};
+                const filledCount = Object.values(subMap).filter(m => m.obtainedMarks !== '').length;
+                return (
+                  <button
+                    key={subName}
+                    type="button"
+                    onClick={() => setActiveSubjectTab(subName)}
+                    style={{
+                      padding: '8px 16px',
+                      borderTopLeftRadius: '10px',
+                      borderTopRightRadius: '10px',
+                      border: '1px solid #E5E7EB',
+                      borderBottom: isActive ? '3px solid #7B2525' : '1px solid #E5E7EB',
+                      backgroundColor: isActive ? '#FFFFFF' : '#F3F4F6',
+                      color: isActive ? '#7B2525' : '#4B5563',
+                      fontWeight: isActive ? 700 : 500,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.15s ease',
+                      marginBottom: '-1px'
+                    }}
+                  >
+                    <span>📖 {subName}</span>
+                    {filledCount > 0 && (
+                      <span style={{ padding: '1px 7px', borderRadius: '10px', backgroundColor: isActive ? '#7B2525' : '#D1D5DB', color: isActive ? '#FFF' : '#374151', fontSize: '11px', fontWeight: 700 }}>
+                        {filledCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Modal Content */}
@@ -610,7 +682,7 @@ export const ExamsPage: React.FC = () => {
                   {/* Quick Action Toolbar */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                      Class Roster: <strong>{students.filter(s => s.classId === selectedExam.classId).length} Students</strong>
+                      Class Roster: <strong>{students.filter(s => s.classId === selectedExam.classId).length} Students</strong> • Entering marks for: <span style={{ color: '#7B2525', fontWeight: 700 }}>📖 {activeSubjectTab}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button type="button" onClick={() => handleSetAllDefaultMarks(selectedExam.maxMarks)} className="btn btn-outline btn-xs" style={{ fontSize: '11px' }}>
@@ -633,14 +705,15 @@ export const ExamsPage: React.FC = () => {
                           <tr style={{ backgroundColor: '#FAF8F5', borderBottom: '1px solid #E5E7EB', textAlign: 'left' }}>
                             <th style={{ padding: '10px 14px', width: '100px', color: '#6B7280', fontWeight: 600 }}>Code</th>
                             <th style={{ padding: '10px 14px', color: '#252525', fontWeight: 600 }}>Student Name</th>
-                            <th style={{ padding: '10px 14px', width: '150px', color: '#252525', fontWeight: 600 }}>Obtained Marks</th>
+                            <th style={{ padding: '10px 14px', width: '150px', color: '#252525', fontWeight: 600 }}>Obtained Marks ({activeSubjectTab})</th>
                             <th style={{ padding: '10px 14px', width: '130px', color: '#252525', fontWeight: 600 }}>Grade / %</th>
                             <th style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600 }}>Remarks</th>
                           </tr>
                         </thead>
                         <tbody>
                           {students.filter(s => s.classId === selectedExam.classId).map((st, idx) => {
-                            const entry = bulkMarks[st.id] || { obtainedMarks: '', remarks: '' };
+                            const subMap = bulkMarks[activeSubjectTab] || {};
+                            const entry = subMap[st.id] || { obtainedMarks: '', remarks: '' };
                             return (
                               <tr key={st.id} style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
                                 <td style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600, fontSize: '12px' }}>
