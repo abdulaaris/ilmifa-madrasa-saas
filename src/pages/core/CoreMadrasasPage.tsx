@@ -598,6 +598,73 @@ export const CoreMadrasasPage: React.FC = () => {
                     💡 When uploaded, this logo will dynamically become the **installed PWA app icon** on phones and desktops!
                   </div>
                 </div>
+
+                {/* Primary Theme Color Picker */}
+                <div style={{ marginTop: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#252525' }}>
+                      Customer Portal App Primary Color
+                    </label>
+                    <button type="button" onClick={() => toggleFieldUnlock('primaryColor')} className={`btn btn-xs ${unlockedFields['primaryColor'] ? 'btn-primary' : 'btn-outline'}`} style={{ gap: '4px', fontSize: '11px', padding: '2px 8px' }}>
+                      {unlockedFields['primaryColor'] ? <Unlock size={12} /> : <Lock size={12} />}
+                      <span>{unlockedFields['primaryColor'] ? 'Unlocked' : 'Edit'}</span>
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <input 
+                      type="color"
+                      value={editPrimaryColor || '#7B2525'}
+                      onChange={e => setEditPrimaryColor(e.target.value)}
+                      disabled={!unlockedFields['primaryColor']}
+                      style={{ width: '42px', height: '38px', padding: 0, border: '1px solid #D1D5DB', borderRadius: '8px', cursor: unlockedFields['primaryColor'] ? 'pointer' : 'not-allowed' }}
+                    />
+                    <input 
+                      type="text" 
+                      className="input-field" 
+                      placeholder="#7B2525" 
+                      value={editPrimaryColor} 
+                      onChange={e => setEditPrimaryColor(e.target.value)} 
+                      disabled={!unlockedFields['primaryColor']}
+                      style={{ flex: 1, backgroundColor: unlockedFields['primaryColor'] ? '#FFF' : '#F9FAFB', cursor: unlockedFields['primaryColor'] ? 'text' : 'not-allowed' }}
+                    />
+                  </div>
+
+                  {/* Preset Swatches */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 500 }}>Presets:</span>
+                    {[
+                      { name: 'Burgundy', hex: '#7B2525' },
+                      { name: 'Emerald', hex: '#059669' },
+                      { name: 'Royal Blue', hex: '#1E40AF' },
+                      { name: 'Amber Gold', hex: '#D97706' },
+                      { name: 'Violet', hex: '#7C3AED' },
+                      { name: 'Ocean Blue', hex: '#0284C7' }
+                    ].map(c => (
+                      <button
+                        key={c.hex}
+                        type="button"
+                        onClick={() => {
+                          if (unlockedFields['primaryColor']) setEditPrimaryColor(c.hex);
+                        }}
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          backgroundColor: c.hex,
+                          border: editPrimaryColor.toLowerCase() === c.hex.toLowerCase() ? '2px solid #111827' : '1px solid rgba(0,0,0,0.1)',
+                          cursor: unlockedFields['primaryColor'] ? 'pointer' : 'not-allowed',
+                          transform: editPrimaryColor.toLowerCase() === c.hex.toLowerCase() ? 'scale(1.15)' : 'scale(1)'
+                        }}
+                        title={c.name}
+                      />
+                    ))}
+                  </div>
+
+                  <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '6px' }}>
+                    🎨 Changes main theme color for buttons, login tabs, headers & mobile PWA app bar for this Madrasa portal!
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>

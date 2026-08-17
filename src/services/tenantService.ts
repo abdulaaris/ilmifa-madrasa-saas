@@ -261,16 +261,27 @@ export const tenantService = {
    * Update Madrasa Tenant details (Super Admin control)
    */
   async updateTenant(tenantId: string, updates: Partial<MadrasaTenant>): Promise<void> {
+    // 1. Immediately update local storage cache for local resilience & zero latency
+    const localKey = `tenant_${tenantId}`;
+    const raw = localStorage.getItem(localKey);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        const merged = { ...parsed, ...updates };
+        localStorage.setItem(localKey, JSON.stringify(merged));
+        if (merged.slug) {
+          localStorage.setItem(`tenant_slug_${merged.slug}`, tenantId);
+        }
+      } catch (e) {
+        console.warn('LocalStorage merge failed:', e);
+      }
+    }
+
+    // 2. Persist to Firestore
     try {
       await updateDoc(doc(db, 'madrasas', tenantId), updates);
     } catch (e) {
       console.warn('Firestore updateTenant failed:', e);
-    }
-
-    const tenant = await this.getTenantById(tenantId);
-    if (tenant) {
-      const merged = { ...tenant, ...updates };
-      localStorage.setItem(`tenant_${tenantId}`, JSON.stringify(merged));
     }
   }
 };

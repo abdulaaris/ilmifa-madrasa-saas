@@ -43,7 +43,7 @@ export const DynamicPWATheme: React.FC = () => {
       document.title = `${tName} • Madrasa Management Portal`;
     }
 
-    // Update Meta Theme Color
+    // Update Meta Theme Color & Global CSS Custom Properties
     let metaTheme = document.querySelector('meta[name="theme-color"]');
     if (!metaTheme) {
       metaTheme = document.createElement('meta');
@@ -51,6 +51,10 @@ export const DynamicPWATheme: React.FC = () => {
       document.head.appendChild(metaTheme);
     }
     metaTheme.setAttribute('content', primaryColor);
+
+    document.documentElement.style.setProperty('--primary', primaryColor);
+    document.documentElement.style.setProperty('--primary-hover', primaryColor);
+    document.documentElement.style.setProperty('--primary-light', `${primaryColor}1A`);
 
     // Update Favicon & Apple Touch Icon
     let faviconLink = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
