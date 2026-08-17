@@ -67,7 +67,7 @@ export const CoreUsersPage: React.FC = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="action-bar-scrollable">
               {['all', 'SUPER_ADMIN', 'PRINCIPAL', 'TEACHER', 'PARENT'].map(role => (
                 <button
                   key={role}
@@ -86,8 +86,8 @@ export const CoreUsersPage: React.FC = () => {
             {loading ? (
               <div style={{ padding: '36px', textAlign: 'center', color: '#666' }}>Loading users database...</div>
             ) : (
-              <div className="table-container" style={{ border: 'none' }}>
-                <table className="custom-table">
+              <div className="table-container" style={{ border: 'none', WebkitOverflowScrolling: 'touch' }}>
+                <table className="custom-table" style={{ minWidth: '600px' }}>
                   <thead>
                     <tr>
                       <th>User Name & Email</th>

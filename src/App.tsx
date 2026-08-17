@@ -30,12 +30,14 @@ import { FeesPage } from './pages/portal/FeesPage';
 import { ExamsPage } from './pages/portal/ExamsPage';
 import { NoticesPage } from './pages/portal/NoticesPage';
 import { TimetablePage } from './pages/portal/TimetablePage';
+import { PWAInstallBanner } from './components/common/PWAInstallBanner';
 
 export const App: React.FC = () => {
   return (
     <AuthProvider>
       <TenantProvider>
         <BrowserRouter>
+          <PWAInstallBanner />
           <Routes>
             {/* Setup & Core Super Admin Routes */}
             <Route path="/setup" element={<SetupPage />} />

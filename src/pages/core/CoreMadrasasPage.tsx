@@ -192,7 +192,7 @@ export const CoreMadrasasPage: React.FC = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="action-bar-scrollable">
               {['all', 'active', 'trial', 'suspended'].map(st => (
                 <button
                   key={st}

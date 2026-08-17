@@ -64,7 +64,7 @@ export const PrincipalDashboard: React.FC = () => {
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="action-bar-scrollable">
               <button onClick={() => navigate(`/m/${slug}/principal/students`)} className="btn btn-primary">
                 <Plus size={16} />
                 <span>Add Student</span>

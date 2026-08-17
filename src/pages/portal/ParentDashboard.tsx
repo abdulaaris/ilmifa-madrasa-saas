@@ -176,7 +176,7 @@ export const ParentDashboard: React.FC = () => {
                   Select Child Profile ({childrenList.length})
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '6px' }}>
+                <div className="action-bar-scrollable" style={{ paddingBottom: '6px' }}>
                   {childrenList.map(child => {
                     const isSelected = selectedChild?.id === child.id;
                     return (
@@ -250,7 +250,7 @@ export const ParentDashboard: React.FC = () => {
                           </div>
 
                           {/* Mode Switcher Slider / Pill Buttons */}
-                          <div style={{ display: 'flex', backgroundColor: '#F3F4F6', borderRadius: '10px', padding: '4px', border: '1px solid #E5E7EB' }}>
+                          <div className="action-bar-scrollable" style={{ backgroundColor: '#F3F4F6', borderRadius: '10px', padding: '4px', border: '1px solid #E5E7EB' }}>
                             <button
                               type="button"
                               onClick={() => setAttMode('daily')}
