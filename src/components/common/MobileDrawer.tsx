@@ -81,8 +81,9 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
           backdropFilter: 'blur(3px)',
           zIndex: 1000,
           opacity: isOpen ? 1 : 0,
+          visibility: isOpen ? 'visible' : 'hidden',
           pointerEvents: isOpen ? 'auto' : 'none',
-          transition: 'opacity 0.25s ease'
+          transition: 'opacity 0.25s ease, visibility 0.25s ease'
         }}
       />
 
@@ -97,11 +98,12 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
           maxWidth: '85vw',
           backgroundColor: '#FFFFFF',
           zIndex: 1001,
-          boxShadow: '4px 0 24px rgba(0, 0, 0, 0.18)',
+          boxShadow: isOpen ? '4px 0 24px rgba(0, 0, 0, 0.18)' : 'none',
+          visibility: isOpen ? 'visible' : 'hidden',
           display: 'flex',
           flexDirection: 'column',
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
-          transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s ease',
           willChange: 'transform'
         }}
       >

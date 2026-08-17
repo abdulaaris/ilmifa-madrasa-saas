@@ -48,7 +48,7 @@ export const TeacherDashboard: React.FC = () => {
           </div>
 
           {/* Quick Action Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+          <div className="stats-grid" style={{ marginBottom: '32px' }}>
             <div 
               onClick={() => navigate(`/m/${slug}/teacher/attendance`)}
               className="card" 
@@ -96,7 +96,7 @@ export const TeacherDashboard: React.FC = () => {
                 No classes currently assigned to your account by the Principal.
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+              <div className="stats-grid">
                 {assignedClasses.map((cls, idx) => (
                   <div key={idx} style={{ padding: '16px', backgroundColor: '#FAF9F7', border: '1px solid #E2DDD5', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <BookOpen size={24} style={{ color: '#7B2525' }} />

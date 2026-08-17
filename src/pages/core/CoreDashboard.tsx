@@ -78,7 +78,7 @@ export const CoreDashboard: React.FC = () => {
           </div>
 
           {/* Metrics Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+          <div className="stats-grid" style={{ marginBottom: '32px' }}>
             <div className="card">
               <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Madrasas</div>
               <div style={{ fontSize: '32px', fontWeight: 700, color: '#7B2525', marginTop: '4px' }}>{totalMadrasas}</div>

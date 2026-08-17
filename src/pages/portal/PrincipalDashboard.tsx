@@ -81,7 +81,7 @@ export const PrincipalDashboard: React.FC = () => {
           </div>
 
           {/* Metrics Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+          <div className="stats-grid" style={{ marginBottom: '32px' }}>
             <div className="card">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#6B7280', fontSize: '13px', fontWeight: 600 }}>
                 <GraduationCap size={18} style={{ color: tenant?.branding?.primaryColor || '#7B2525' }} />

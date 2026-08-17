@@ -9,7 +9,7 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Award, Plus, X, Edit2, Trash2, Check } from 'lucide-react';
+import { Award, Plus, X, Edit2, Trash2, Check, Search } from 'lucide-react';
 
 import { classService } from '../../services/classService';
 import { teacherService } from '../../services/teacherService';
@@ -44,6 +44,7 @@ export const ExamsPage: React.FC = () => {
   const [selectedExam, setSelectedExam] = useState<ExamRecord | null>(null);
   const [activeSubjectTab, setActiveSubjectTab] = useState('');
   const [bulkMarks, setBulkMarks] = useState<Record<string, Record<string, { obtainedMarks: number | ''; remarks: string }>>>({});
+  const [bulkSearch, setBulkSearch] = useState('');
   const [loadingExamStudents, setLoadingExamStudents] = useState(false);
   const [savingBulkResults, setSavingBulkResults] = useState(false);
   const [bulkSuccessMessage, setBulkSuccessMessage] = useState<string | null>(null);
@@ -158,6 +159,7 @@ export const ExamsPage: React.FC = () => {
 
   const openEnterMarksModal = async (ex: ExamRecord) => {
     setSelectedExam(ex);
+    setBulkSearch('');
     setLoadingExamStudents(true);
     setBulkSuccessMessage(null);
 
@@ -448,8 +450,8 @@ export const ExamsPage: React.FC = () => {
 
       {/* Schedule / Edit Exam Modal */}
       {isExamModalOpen && canEdit && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '540px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
+          <div className="modal-card" style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '540px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
                 {editingExam ? 'Edit Examination' : 'Schedule Examination'}
@@ -609,8 +611,8 @@ export const ExamsPage: React.FC = () => {
 
       {/* Excel Sheet Quick Student Marks Entry Modal */}
       {selectedExam && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', borderRadius: '20px', maxWidth: '860px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
+          <div className="modal-card" style={{ backgroundColor: '#FFF', borderRadius: '20px', maxWidth: '860px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             {/* Modal Header */}
             <div style={{ padding: '18px 24px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FAF9F7', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
               <div>
@@ -627,7 +629,7 @@ export const ExamsPage: React.FC = () => {
             </div>
 
             {/* Subject Navigation Tabs Bar */}
-            <div style={{ display: 'flex', gap: '6px', padding: '10px 24px 0', backgroundColor: '#FAF9F7', borderBottom: '1px solid #E5E7EB', overflowX: 'auto' }}>
+            <div style={{ display: 'flex', gap: '6px', padding: '10px 24px 0', backgroundColor: '#FAF9F7', borderBottom: '1px solid #E5E7EB', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               {(selectedExam.subjects && selectedExam.subjects.length > 0 
                 ? selectedExam.subjects 
                 : selectedExam.subject ? selectedExam.subject.split(', ').map(s => s.trim()) : ['General']
@@ -679,84 +681,106 @@ export const ExamsPage: React.FC = () => {
                 <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Loading class roster & existing marks...</div>
               ) : (
                 <form onSubmit={handleSaveBulkResults}>
-                  {/* Quick Action Toolbar */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                      Class Roster: <strong>{students.filter(s => s.classId === selectedExam.classId).length} Students</strong> • Entering marks for: <span style={{ color: '#7B2525', fontWeight: 700 }}>📖 {activeSubjectTab}</span>
+                  {/* Student Search & Quick Action Toolbar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ position: 'relative', width: '260px' }}>
+                      <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                      <input 
+                        type="text" 
+                        className="input-field"
+                        placeholder="Search student by name or code..."
+                        value={bulkSearch}
+                        onChange={e => setBulkSearch(e.target.value)}
+                        style={{ paddingLeft: '32px', paddingRight: '10px', fontSize: '12px', height: '36px' }}
+                      />
                     </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button type="button" onClick={() => handleSetAllDefaultMarks(selectedExam.maxMarks)} className="btn btn-outline btn-xs" style={{ fontSize: '11px' }}>
-                        ⚡ Set All {selectedExam.maxMarks} (Full Marks)
+
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 500 }}>Quick Fill ({activeSubjectTab}):</span>
+                      <button type="button" onClick={() => handleSetAllDefaultMarks(selectedExam.maxMarks)} className="btn btn-outline btn-xs" style={{ fontSize: '11px', padding: '5px 10px' }}>
+                        ⚡ Set All {selectedExam.maxMarks} (Full)
                       </button>
-                      <button type="button" onClick={() => handleSetAllDefaultMarks(0)} className="btn btn-outline btn-xs" style={{ fontSize: '11px', color: '#DC2626' }}>
+                      <button type="button" onClick={() => handleSetAllDefaultMarks(0)} className="btn btn-outline btn-xs" style={{ fontSize: '11px', padding: '5px 10px', color: '#DC2626' }}>
                         Clear All
                       </button>
                     </div>
                   </div>
 
-                  {students.filter(s => s.classId === selectedExam.classId).length === 0 ? (
-                    <div style={{ padding: '32px', textAlign: 'center', color: '#666', backgroundColor: '#F9FAFB', borderRadius: '12px' }}>
-                      No students found in class <strong>{selectedExam.classId}</strong>.
-                    </div>
-                  ) : (
-                    <div style={{ border: '1px solid #E5E7EB', borderRadius: '12px', overflow: 'hidden' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                        <thead>
-                          <tr style={{ backgroundColor: '#FAF8F5', borderBottom: '1px solid #E5E7EB', textAlign: 'left' }}>
-                            <th style={{ padding: '10px 14px', width: '100px', color: '#6B7280', fontWeight: 600 }}>Code</th>
-                            <th style={{ padding: '10px 14px', color: '#252525', fontWeight: 600 }}>Student Name</th>
-                            <th style={{ padding: '10px 14px', width: '150px', color: '#252525', fontWeight: 600 }}>Obtained Marks ({activeSubjectTab})</th>
-                            <th style={{ padding: '10px 14px', width: '130px', color: '#252525', fontWeight: 600 }}>Grade / %</th>
-                            <th style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600 }}>Remarks</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {students.filter(s => s.classId === selectedExam.classId).map((st, idx) => {
-                            const subMap = bulkMarks[activeSubjectTab] || {};
-                            const entry = subMap[st.id] || { obtainedMarks: '', remarks: '' };
-                            return (
-                              <tr key={st.id} style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                                <td style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600, fontSize: '12px' }}>
-                                  {st.studentCode}
-                                </td>
-                                <td style={{ padding: '10px 14px', fontWeight: 600, color: '#111827' }}>
-                                  {st.name}
-                                </td>
-                                <td style={{ padding: '10px 14px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {(() => {
+                    const filteredRoster = students.filter(s => 
+                      s.classId === selectedExam.classId &&
+                      (s.name.toLowerCase().includes(bulkSearch.toLowerCase()) || 
+                       (s.studentCode && s.studentCode.toLowerCase().includes(bulkSearch.toLowerCase())))
+                    );
+
+                    if (filteredRoster.length === 0) {
+                      return (
+                        <div style={{ padding: '32px', textAlign: 'center', color: '#666', backgroundColor: '#F9FAFB', borderRadius: '12px' }}>
+                          No students found matching <strong>"{bulkSearch}"</strong> in class {selectedExam.classId}.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{ border: '1px solid #E5E7EB', borderRadius: '12px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                        <table style={{ width: '100%', minWidth: '660px', borderCollapse: 'collapse', fontSize: '13px' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#FAF8F5', borderBottom: '1px solid #E5E7EB', textAlign: 'left' }}>
+                              <th style={{ padding: '10px 14px', width: '100px', color: '#6B7280', fontWeight: 600 }}>Code</th>
+                              <th style={{ padding: '10px 14px', color: '#252525', fontWeight: 600 }}>Student Name</th>
+                              <th style={{ padding: '10px 14px', width: '150px', color: '#252525', fontWeight: 600 }}>Obtained Marks ({activeSubjectTab})</th>
+                              <th style={{ padding: '10px 14px', width: '130px', color: '#252525', fontWeight: 600 }}>Grade / %</th>
+                              <th style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600 }}>Remarks</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredRoster.map((st, idx) => {
+                              const subMap = bulkMarks[activeSubjectTab] || {};
+                              const entry = subMap[st.id] || { obtainedMarks: '', remarks: '' };
+                              return (
+                                <tr key={st.id} style={{ borderBottom: '1px solid #F3F4F6', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
+                                  <td style={{ padding: '10px 14px', color: '#6B7280', fontWeight: 600, fontSize: '12px' }}>
+                                    {st.studentCode}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', fontWeight: 600, color: '#111827' }}>
+                                    {st.name}
+                                  </td>
+                                  <td style={{ padding: '10px 14px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <input 
+                                        type="number" 
+                                        className="input-field" 
+                                        placeholder="0"
+                                        value={entry.obtainedMarks} 
+                                        onChange={e => handleMarkChange(st.id, e.target.value)} 
+                                        min={0}
+                                        max={selectedExam.maxMarks}
+                                        style={{ width: '80px', padding: '6px 10px', fontWeight: 700, textAlign: 'center', borderColor: entry.obtainedMarks !== '' ? '#7B2525' : '#D1D5DB' }}
+                                      />
+                                      <span style={{ fontSize: '11px', color: '#6B7280' }}>/ {selectedExam.maxMarks}</span>
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '10px 14px' }}>
+                                    {calculateGradeBadge(entry.obtainedMarks, selectedExam.maxMarks)}
+                                  </td>
+                                  <td style={{ padding: '10px 14px' }}>
                                     <input 
-                                      type="number" 
+                                      type="text" 
                                       className="input-field" 
-                                      placeholder="0"
-                                      value={entry.obtainedMarks} 
-                                      onChange={e => handleMarkChange(st.id, e.target.value)} 
-                                      min={0}
-                                      max={selectedExam.maxMarks}
-                                      style={{ width: '80px', padding: '6px 10px', fontWeight: 700, textAlign: 'center', borderColor: entry.obtainedMarks !== '' ? '#7B2525' : '#D1D5DB' }}
+                                      placeholder="Good performance..."
+                                      value={entry.remarks} 
+                                      onChange={e => handleRemarkChange(st.id, e.target.value)} 
+                                      style={{ padding: '6px 10px', fontSize: '12px' }}
                                     />
-                                    <span style={{ fontSize: '11px', color: '#6B7280' }}>/ {selectedExam.maxMarks}</span>
-                                  </div>
-                                </td>
-                                <td style={{ padding: '10px 14px' }}>
-                                  {calculateGradeBadge(entry.obtainedMarks, selectedExam.maxMarks)}
-                                </td>
-                                <td style={{ padding: '10px 14px' }}>
-                                  <input 
-                                    type="text" 
-                                    className="input-field" 
-                                    placeholder="Good performance..."
-                                    value={entry.remarks} 
-                                    onChange={e => handleRemarkChange(st.id, e.target.value)} 
-                                    style={{ padding: '6px 10px', fontSize: '12px' }}
-                                  />
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
                     <button type="button" onClick={() => setSelectedExam(null)} className="btn btn-outline">Cancel</button>

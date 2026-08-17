@@ -395,7 +395,7 @@ export const ParentDashboard: React.FC = () => {
                             </div>
 
                             {/* Monthly Overview Cards */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                            <div className="stats-grid">
                               <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', textAlign: 'center' }}>
                                 <div style={{ fontSize: '12px', color: '#6B7280', fontWeight: 600 }}>Monthly Rate</div>
                                 <div style={{ fontSize: '22px', fontWeight: 800, color: monthlyPercentage >= 85 ? '#059669' : '#D97706', marginTop: '4px' }}>
@@ -496,7 +496,7 @@ export const ParentDashboard: React.FC = () => {
                             </div>
 
                             {/* Attendance Counters Grid */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                            <div className="stats-grid">
                               <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', textAlign: 'center' }}>
                                 <div style={{ fontSize: '12px', fontWeight: 600, color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                                   <CheckCircle2 size={14} />
