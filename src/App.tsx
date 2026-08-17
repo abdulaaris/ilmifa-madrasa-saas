@@ -38,8 +38,8 @@ export const App: React.FC = () => {
   return (
     <AuthProvider>
       <TenantProvider>
-        <DynamicPWATheme />
         <BrowserRouter>
+          <DynamicPWATheme />
           <PWAInstallBanner />
           <Routes>
             {/* Setup & Core Super Admin Routes */}
