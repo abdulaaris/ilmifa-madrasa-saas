@@ -34,6 +34,8 @@ export const ExamsPage: React.FC = () => {
   const [title, setTitle] = useState('Mid-Term Examination 2026');
   const [selectedClass, setSelectedClass] = useState('');
   const [subject, setSubject] = useState('Tajweed & Quran');
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [customSubjectInput, setCustomSubjectInput] = useState('');
   const [maxMarks, setMaxMarks] = useState<number>(100);
   const [examDate, setExamDate] = useState('2026-10-15');
   const [savingExam, setSavingExam] = useState(false);
@@ -92,6 +94,8 @@ export const ExamsPage: React.FC = () => {
     setTitle('Mid-Term Examination 2026');
     setSelectedClass(availableClasses[0] || '');
     setSubject(availableSubjects[0] || '');
+    setSelectedSubjects(availableSubjects.length > 0 ? [availableSubjects[0]] : []);
+    setCustomSubjectInput('');
     setMaxMarks(100);
     setExamDate(new Date().toISOString().substring(0, 10));
     setIsExamModalOpen(true);
@@ -102,9 +106,24 @@ export const ExamsPage: React.FC = () => {
     setTitle(ex.title);
     setSelectedClass(ex.classId);
     setSubject(ex.subject);
+    setSelectedSubjects(ex.subjects && ex.subjects.length > 0 ? ex.subjects : ex.subject ? [ex.subject] : []);
+    setCustomSubjectInput('');
     setMaxMarks(ex.maxMarks);
     setExamDate(ex.examDate);
     setIsExamModalOpen(true);
+  };
+
+  const toggleSubjectSelect = (subName: string) => {
+    setSelectedSubjects(prev =>
+      prev.includes(subName) ? prev.filter(s => s !== subName) : [...prev, subName]
+    );
+  };
+
+  const handleAddCustomSubject = () => {
+    if (customSubjectInput.trim() && !selectedSubjects.includes(customSubjectInput.trim())) {
+      setSelectedSubjects(prev => [...prev, customSubjectInput.trim()]);
+      setCustomSubjectInput('');
+    }
   };
 
   const openEnterMarksModal = async (ex: ExamRecord) => {
@@ -168,11 +187,14 @@ export const ExamsPage: React.FC = () => {
     if (!tenant?.id || !title) return;
     setSavingExam(true);
 
+    const subjectString = selectedSubjects.length > 0 ? selectedSubjects.join(', ') : subject || 'General';
+
     if (editingExam) {
       await examService.updateExam(tenant.id, editingExam.id, {
         title,
         classId: selectedClass,
-        subject,
+        subject: subjectString,
+        subjects: selectedSubjects,
         maxMarks: Number(maxMarks),
         examDate
       });
@@ -180,7 +202,8 @@ export const ExamsPage: React.FC = () => {
       await examService.createExam(tenant.id, {
         title,
         classId: selectedClass,
-        subject,
+        subject: subjectString,
+        subjects: selectedSubjects,
         maxMarks: Number(maxMarks),
         examDate
       });
@@ -319,11 +342,22 @@ export const ExamsPage: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', marginBottom: '4px' }}>
+                     <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', marginBottom: '4px' }}>
                       {ex.title}
                     </h3>
-                    <div style={{ fontSize: '13px', color: '#7B2525', fontWeight: 600, marginBottom: '16px' }}>
-                      Subject: {ex.subject} • Max Marks: {ex.maxMarks}
+                    <div style={{ fontSize: '13px', color: '#7B2525', fontWeight: 600, marginBottom: '8px' }}>
+                      Max Marks: {ex.maxMarks} • Date: {ex.examDate}
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600, marginBottom: '4px' }}>Included Subject(s):</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {(ex.subjects && ex.subjects.length > 0 ? ex.subjects : ex.subject ? ex.subject.split(', ') : ['General']).map(s => (
+                          <span key={s} style={{ padding: '2px 8px', backgroundColor: '#F3F4F6', color: '#374151', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                            {s}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
@@ -347,7 +381,7 @@ export const ExamsPage: React.FC = () => {
       {/* Schedule / Edit Exam Modal */}
       {isExamModalOpen && canEdit && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '480px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
+          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '520px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
                 {editingExam ? 'Edit Examination' : 'Schedule Examination'}
@@ -365,32 +399,95 @@ export const ExamsPage: React.FC = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Class Level</label>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Class Level *</label>
                   <select className="input-field" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
                     {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Subject *</label>
-                  {availableSubjects.length > 0 ? (
-                    <select className="input-field" value={subject} onChange={e => setSubject(e.target.value)}>
-                      {availableSubjects.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  ) : (
-                    <input type="text" className="input-field" placeholder="e.g. Tajweed, Fiqh" value={subject} onChange={e => setSubject(e.target.value)} required />
-                  )}
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Max Marks *</label>
+                  <input type="number" className="input-field" value={maxMarks} onChange={e => setMaxMarks(Number(e.target.value))} />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Max Marks</label>
-                  <input type="number" className="input-field" value={maxMarks} onChange={e => setMaxMarks(Number(e.target.value))} />
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Exam Date *</label>
+                <input type="date" className="input-field" value={examDate} onChange={e => setExamDate(e.target.value)} />
+              </div>
+
+              {/* Select Subjects for this Exam */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: '#252525' }}>
+                  Select Subject(s) Included in this Exam *
+                </label>
+                
+                {availableSubjects.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px', backgroundColor: '#FAF9F7', borderRadius: '10px', border: '1px solid #E5E7EB', maxHeight: '130px', overflowY: 'auto' }}>
+                    {availableSubjects.map(sub => {
+                      const isSelected = selectedSubjects.includes(sub);
+                      return (
+                        <button
+                          key={sub}
+                          type="button"
+                          onClick={() => toggleSubjectSelect(sub)}
+                          style={{
+                            padding: '5px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            border: isSelected ? '1.5px solid #7B2525' : '1px solid #D1D5DB',
+                            backgroundColor: isSelected ? '#7B2525' : '#FFFFFF',
+                            color: isSelected ? '#FFFFFF' : '#374151',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {isSelected && <Check size={13} />}
+                          <span>{sub}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '6px' }}>
+                    No pre-created subjects found in Subjects Directory. Add subject manually below:
+                  </div>
+                )}
+
+                {/* Custom subject manual add */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Add custom subject (e.g. Tajweed)..."
+                    value={customSubjectInput}
+                    onChange={e => setCustomSubjectInput(e.target.value)}
+                    style={{ fontSize: '12px', padding: '6px 10px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomSubject}
+                    className="btn btn-outline btn-sm"
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    + Add
+                  </button>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Exam Date</label>
-                  <input type="date" className="input-field" value={examDate} onChange={e => setExamDate(e.target.value)} />
-                </div>
+
+                {selectedSubjects.length > 0 && (
+                  <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', color: '#6B7280', alignSelf: 'center' }}>Selected:</span>
+                    {selectedSubjects.map(s => (
+                      <span key={s} style={{ padding: '2px 8px', backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: '12px', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {s}
+                        <X size={12} style={{ cursor: 'pointer' }} onClick={() => toggleSubjectSelect(s)} />
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
