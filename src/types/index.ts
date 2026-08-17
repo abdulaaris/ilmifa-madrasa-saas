@@ -143,6 +143,7 @@ export interface ExamRecord {
   classId: string;
   subject: string;
   subjects?: string[];
+  subjectDates?: Record<string, string>;
   maxMarks: number;
   examDate: string;
   createdAt: string;

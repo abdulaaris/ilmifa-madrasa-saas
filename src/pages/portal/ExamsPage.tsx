@@ -35,9 +35,9 @@ export const ExamsPage: React.FC = () => {
   const [selectedClass, setSelectedClass] = useState('');
   const [subject, setSubject] = useState('Tajweed & Quran');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [subjectDates, setSubjectDates] = useState<Record<string, string>>({});
   const [customSubjectInput, setCustomSubjectInput] = useState('');
   const [maxMarks, setMaxMarks] = useState<number>(100);
-  const [examDate, setExamDate] = useState('2026-10-15');
   const [savingExam, setSavingExam] = useState(false);
 
   // Excel Sheet Bulk Result Entry Modal State
@@ -94,10 +94,16 @@ export const ExamsPage: React.FC = () => {
     setTitle('Mid-Term Examination 2026');
     setSelectedClass(availableClasses[0] || '');
     setSubject(availableSubjects[0] || '');
-    setSelectedSubjects(availableSubjects.length > 0 ? [availableSubjects[0]] : []);
+    const todayStr = new Date().toISOString().substring(0, 10);
+    const initialSubs = availableSubjects.length > 0 ? [availableSubjects[0]] : [];
+    setSelectedSubjects(initialSubs);
+    const initialDates: Record<string, string> = {};
+    initialSubs.forEach(s => {
+      initialDates[s] = todayStr;
+    });
+    setSubjectDates(initialDates);
     setCustomSubjectInput('');
     setMaxMarks(100);
-    setExamDate(new Date().toISOString().substring(0, 10));
     setIsExamModalOpen(true);
   };
 
@@ -106,22 +112,45 @@ export const ExamsPage: React.FC = () => {
     setTitle(ex.title);
     setSelectedClass(ex.classId);
     setSubject(ex.subject);
-    setSelectedSubjects(ex.subjects && ex.subjects.length > 0 ? ex.subjects : ex.subject ? [ex.subject] : []);
+    const subs = ex.subjects && ex.subjects.length > 0 ? ex.subjects : ex.subject ? [ex.subject] : [];
+    setSelectedSubjects(subs);
+    
+    const datesMap: Record<string, string> = { ...(ex.subjectDates || {}) };
+    const fallbackDate = ex.examDate || new Date().toISOString().substring(0, 10);
+    subs.forEach(s => {
+      if (!datesMap[s]) datesMap[s] = fallbackDate;
+    });
+    setSubjectDates(datesMap);
     setCustomSubjectInput('');
     setMaxMarks(ex.maxMarks);
-    setExamDate(ex.examDate);
     setIsExamModalOpen(true);
   };
 
   const toggleSubjectSelect = (subName: string) => {
-    setSelectedSubjects(prev =>
-      prev.includes(subName) ? prev.filter(s => s !== subName) : [...prev, subName]
-    );
+    const todayStr = new Date().toISOString().substring(0, 10);
+    setSelectedSubjects(prev => {
+      if (prev.includes(subName)) {
+        return prev.filter(s => s !== subName);
+      } else {
+        setSubjectDates(d => ({ ...d, [subName]: d[subName] || todayStr }));
+        return [...prev, subName];
+      }
+    });
+  };
+
+  const handleSubjectDateChange = (subName: string, dateVal: string) => {
+    setSubjectDates(prev => ({
+      ...prev,
+      [subName]: dateVal
+    }));
   };
 
   const handleAddCustomSubject = () => {
     if (customSubjectInput.trim() && !selectedSubjects.includes(customSubjectInput.trim())) {
-      setSelectedSubjects(prev => [...prev, customSubjectInput.trim()]);
+      const newSub = customSubjectInput.trim();
+      const todayStr = new Date().toISOString().substring(0, 10);
+      setSelectedSubjects(prev => [...prev, newSub]);
+      setSubjectDates(d => ({ ...d, [newSub]: todayStr }));
       setCustomSubjectInput('');
     }
   };
@@ -188,6 +217,8 @@ export const ExamsPage: React.FC = () => {
     setSavingExam(true);
 
     const subjectString = selectedSubjects.length > 0 ? selectedSubjects.join(', ') : subject || 'General';
+    const dateValues = Object.values(subjectDates).filter(Boolean);
+    const primaryDate = dateValues.length > 0 ? dateValues.sort()[0] : new Date().toISOString().substring(0, 10);
 
     if (editingExam) {
       await examService.updateExam(tenant.id, editingExam.id, {
@@ -195,8 +226,9 @@ export const ExamsPage: React.FC = () => {
         classId: selectedClass,
         subject: subjectString,
         subjects: selectedSubjects,
+        subjectDates,
         maxMarks: Number(maxMarks),
-        examDate
+        examDate: primaryDate
       });
     } else {
       await examService.createExam(tenant.id, {
@@ -204,8 +236,9 @@ export const ExamsPage: React.FC = () => {
         classId: selectedClass,
         subject: subjectString,
         subjects: selectedSubjects,
+        subjectDates,
         maxMarks: Number(maxMarks),
-        examDate
+        examDate: primaryDate
       });
     }
 
@@ -346,17 +379,23 @@ export const ExamsPage: React.FC = () => {
                       {ex.title}
                     </h3>
                     <div style={{ fontSize: '13px', color: '#7B2525', fontWeight: 600, marginBottom: '8px' }}>
-                      Max Marks: {ex.maxMarks} • Date: {ex.examDate}
+                      Class: {ex.classId} • Max Marks: {ex.maxMarks}
                     </div>
 
                     <div style={{ marginBottom: '16px' }}>
-                      <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600, marginBottom: '4px' }}>Included Subject(s):</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {(ex.subjects && ex.subjects.length > 0 ? ex.subjects : ex.subject ? ex.subject.split(', ') : ['General']).map(s => (
-                          <span key={s} style={{ padding: '2px 8px', backgroundColor: '#F3F4F6', color: '#374151', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
-                            {s}
-                          </span>
-                        ))}
+                      <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600, marginBottom: '6px' }}>Subject Schedule & Dates:</div>
+                      <div style={{ display: 'grid', gap: '6px' }}>
+                        {(ex.subjects && ex.subjects.length > 0 ? ex.subjects : [ex.subject]).map(sub => {
+                          const sDate = (ex.subjectDates && ex.subjectDates[sub]) || ex.examDate;
+                          return (
+                            <div key={sub} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9FAFB', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E5E7EB', fontSize: '12px' }}>
+                              <span style={{ fontWeight: 600, color: '#252525' }}>📖 {sub}</span>
+                              <span className="badge badge-trial" style={{ fontSize: '11px', gap: '4px' }}>
+                                📅 {sDate}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -381,7 +420,7 @@ export const ExamsPage: React.FC = () => {
       {/* Schedule / Edit Exam Modal */}
       {isExamModalOpen && canEdit && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '520px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '540px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#252525', margin: 0 }}>
                 {editingExam ? 'Edit Examination' : 'Schedule Examination'}
@@ -408,11 +447,6 @@ export const ExamsPage: React.FC = () => {
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Max Marks *</label>
                   <input type="number" className="input-field" value={maxMarks} onChange={e => setMaxMarks(Number(e.target.value))} />
                 </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Exam Date *</label>
-                <input type="date" className="input-field" value={examDate} onChange={e => setExamDate(e.target.value)} />
               </div>
 
               {/* Select Subjects for this Exam */}
@@ -489,6 +523,35 @@ export const ExamsPage: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Individual Per-Subject Date Pickers */}
+              {selectedSubjects.length > 0 && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: '#252525' }}>
+                    📅 Exam Date for Each Selected Subject *
+                  </label>
+                  <div style={{ display: 'grid', gap: '8px', padding: '10px', backgroundColor: '#FAF9F7', borderRadius: '10px', border: '1px solid #E5E7EB' }}>
+                    {selectedSubjects.map(subName => (
+                      <div key={subName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#7B2525' }}>
+                          📖 {subName}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 500 }}>Exam Date:</span>
+                          <input
+                            type="date"
+                            className="input-field"
+                            value={subjectDates[subName] || new Date().toISOString().substring(0, 10)}
+                            onChange={e => handleSubjectDateChange(subName, e.target.value)}
+                            style={{ padding: '4px 8px', fontSize: '12px', width: '135px', fontWeight: 600 }}
+                            required
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
                 {editingExam ? (
