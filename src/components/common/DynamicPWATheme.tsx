@@ -1,21 +1,49 @@
 import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTenant } from '../../context/TenantContext';
 
 export const DynamicPWATheme: React.FC = () => {
   const { tenant } = useTenant();
+  const location = useLocation();
 
   useEffect(() => {
-    if (!tenant) return;
+    const isCoreAdmin = location.pathname.startsWith('/core');
+    
+    let appName = 'iLmiFa - Madrasa Management';
+    let appShortName = 'iLmiFa';
+    let startUrl = '/';
+    let appScope = '/';
+    let appId = 'ilmifa_portal_default';
+    let primaryColor = '#7B2525';
+    let logoUrl = '/pwa-192x192.png';
+    let description = 'Multi-tenant Madrasa Management SaaS Platform';
 
-    const tenantName = tenant.name || 'Ilmifa Madrasa';
-    const primaryColor = tenant.branding?.primaryColor || '#7B2525';
-    const logoUrl = tenant.branding?.logoUrl || '/favicon.svg';
-    const startUrl = tenant.slug ? `/m/${tenant.slug}` : '/';
+    if (isCoreAdmin) {
+      // 1. Super Admin Isolated PWA Profile
+      appName = 'iLmiFa Core Admin';
+      appShortName = 'iLmiFa Core';
+      startUrl = '/core/login';
+      appScope = '/core/';
+      appId = 'ilmifa_core_super_admin';
+      primaryColor = '#7B2525';
+      logoUrl = '/pwa-192x192.png';
+      description = 'iLmiFa Super Admin Master Management Platform';
+      document.title = 'iLmiFa Core • Super Admin Platform';
+    } else if (tenant) {
+      // 2. Specific Customer Madrasa Tenant Isolated PWA Profile
+      const tName = tenant.name || 'Madrasa Portal';
+      appName = `${tName} App`;
+      appShortName = tName.length > 12 ? tName.substring(0, 12) : tName;
+      startUrl = `/m/${tenant.slug}/login`;
+      appScope = `/m/${tenant.slug}/`;
+      appId = `ilmifa_tenant_${tenant.slug}`;
+      primaryColor = tenant.branding?.primaryColor || '#7B2525';
+      logoUrl = tenant.branding?.logoUrl || '/pwa-192x192.png';
+      description = `Official ${tName} Management Portal`;
+      document.title = `${tName} • Madrasa Management Portal`;
+    }
 
-    // 1. Update Document Title
-    document.title = `${tenantName} • Ilmifa Madrasa Portal`;
-
-    // 2. Update Meta Theme Color
+    // Update Meta Theme Color
     let metaTheme = document.querySelector('meta[name="theme-color"]');
     if (!metaTheme) {
       metaTheme = document.createElement('meta');
@@ -24,7 +52,7 @@ export const DynamicPWATheme: React.FC = () => {
     }
     metaTheme.setAttribute('content', primaryColor);
 
-    // 3. Update Favicon & Apple Touch Icon
+    // Update Favicon & Apple Touch Icon
     let faviconLink = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
     if (!faviconLink) {
       faviconLink = document.createElement('link');
@@ -41,22 +69,30 @@ export const DynamicPWATheme: React.FC = () => {
     }
     appleTouchLink.href = logoUrl;
 
-    // 4. Dynamically generate and inject Tenant-specific PWA Manifest
+    // Dynamically generate W3C Isolated PWA Manifest per Tenant / Core Admin
     const dynamicManifest = {
-      name: `${tenantName} - Madrasa Portal`,
-      short_name: tenantName.length > 12 ? tenantName.substring(0, 12) : tenantName,
+      id: appId,
+      name: appName,
+      short_name: appShortName,
       start_url: startUrl,
+      scope: appScope,
       display: "standalone",
       theme_color: primaryColor,
       background_color: "#F7F5F2",
       orientation: "any",
-      description: `Official ${tenantName} Madrasa Management Portal`,
+      description: description,
       icons: [
         {
           src: logoUrl,
           sizes: "192x192 512x512",
           type: logoUrl.endsWith('.svg') ? "image/svg+xml" : "image/png",
           purpose: "any maskable"
+        },
+        {
+          src: "/pwa-512x512.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "any"
         }
       ]
     };
@@ -76,7 +112,7 @@ export const DynamicPWATheme: React.FC = () => {
     return () => {
       URL.revokeObjectURL(manifestBlobUrl);
     };
-  }, [tenant]);
+  }, [tenant, location.pathname]);
 
   return null;
 };

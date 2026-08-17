@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Download, X, Smartphone, CheckCircle, ShieldCheck, Zap, ArrowRight, Share, MoreVertical, Compass } from 'lucide-react';
 import { useTenant } from '../../context/TenantContext';
 
@@ -9,14 +10,20 @@ interface BeforeInstallPromptEvent extends Event {
 
 export const PWAInstallBanner: React.FC = () => {
   const { tenant } = useTenant();
+  const location = useLocation();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showGuide, setShowGuide] = useState<boolean>(false);
   const [isStandalone, setIsStandalone] = useState<boolean>(false);
   const [isIOS, setIsIOS] = useState<boolean>(false);
 
+  const isCoreAdmin = location.pathname.startsWith('/core');
+  const sessionKey = isCoreAdmin 
+    ? 'pwa_dismissed_core_admin' 
+    : (tenant?.slug ? `pwa_dismissed_tenant_${tenant.slug}` : 'pwa_dismissed_portal_default');
+
   useEffect(() => {
-    // Check if already running in standalone mode (PWA installed)
+    // Check if running in standalone mode (PWA installed)
     const isInStandalone = 
       window.matchMedia('(display-mode: standalone)').matches || 
       (navigator as unknown as { standalone?: boolean }).standalone === true;
@@ -36,21 +43,27 @@ export const PWAInstallBanner: React.FC = () => {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setShowModal(true);
+      const dismissed = localStorage.getItem(sessionKey);
+      if (!dismissed) {
+        setShowModal(true);
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Show modal on portal arrival if not running as standalone
-    const timer = setTimeout(() => {
-      setShowModal(true);
-    }, 400);
+    // Show modal on entry if not dismissed for this specific portal
+    const dismissed = localStorage.getItem(sessionKey);
+    if (!isInStandalone && !dismissed) {
+      const timer = setTimeout(() => {
+        setShowModal(true);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      clearTimeout(timer);
     };
-  }, []);
+  }, [sessionKey]);
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -59,6 +72,7 @@ export const PWAInstallBanner: React.FC = () => {
         const choiceResult = await deferredPrompt.userChoice;
         if (choiceResult.outcome === 'accepted') {
           console.log('User accepted the PWA install prompt');
+          localStorage.setItem(sessionKey, 'true');
           setShowModal(false);
           return;
         }
@@ -67,18 +81,28 @@ export const PWAInstallBanner: React.FC = () => {
       }
     }
     
-    // If native prompt wasn't triggered or failed, show interactive installation guide!
+    // If native prompt wasn't triggered or failed, show interactive installation guide
     setShowGuide(true);
   };
 
   const handleCancelClick = () => {
+    localStorage.setItem(sessionKey, 'true');
     setShowModal(false);
   };
 
   if (!showModal || isStandalone) return null;
 
-  const appName = tenant?.name || 'Ilmifa Madrasa';
-  const primaryColor = tenant?.branding?.primaryColor || '#7B2525';
+  const appName = isCoreAdmin 
+    ? 'iLmiFa Core Admin' 
+    : (tenant?.name ? `${tenant.name} App` : 'Ilmifa Madrasa App');
+
+  const primaryColor = isCoreAdmin 
+    ? '#7B2525' 
+    : (tenant?.branding?.primaryColor || '#7B2525');
+
+  const logoUrl = isCoreAdmin 
+    ? '/pwa-192x192.png' 
+    : (tenant?.branding?.logoUrl || '/pwa-192x192.png');
 
   return (
     <div 
@@ -127,17 +151,25 @@ export const PWAInstallBanner: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   boxShadow: `0 10px 24px ${primaryColor}40`,
-                  marginBottom: '14px'
+                  marginBottom: '14px',
+                  overflow: 'hidden'
                 }}
               >
-                <Smartphone size={36} />
+                {logoUrl && logoUrl !== '/pwa-192x192.png' ? (
+                  <img src={logoUrl} alt={appName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <Smartphone size={36} />
+                )}
               </div>
 
               <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#111827', margin: 0 }}>
-                Install {appName} App
+                Install {appName}
               </h2>
               <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '6px', lineHeight: '1.5' }}>
-                Install official Madrasa App on your device for fast 1-tap launch, offline access & full-screen portal.
+                {isCoreAdmin 
+                  ? 'Install official Super Admin platform on your device for fast 1-tap access.' 
+                  : `Install official ${tenant?.name || 'Madrasa'} App on your phone for 1-tap access & offline reports.`
+                }
               </p>
             </div>
 
@@ -148,7 +180,7 @@ export const PWAInstallBanner: React.FC = () => {
                   <Zap size={16} />
                 </div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                  Instant 1-Tap Home Screen Access
+                  Standalone Dedicated App Experience
                 </div>
               </div>
 
@@ -157,7 +189,7 @@ export const PWAInstallBanner: React.FC = () => {
                   <ShieldCheck size={16} />
                 </div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                  Secure & Fast App Performance
+                  Isolated Portal Security & Fast Launch
                 </div>
               </div>
 
@@ -166,7 +198,7 @@ export const PWAInstallBanner: React.FC = () => {
                   <CheckCircle size={16} />
                 </div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                  Offline Attendance & Marks Reports
+                  Offline Support & Home Screen Icon
                 </div>
               </div>
             </div>

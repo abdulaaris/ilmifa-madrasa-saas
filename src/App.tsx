@@ -32,6 +32,7 @@ import { NoticesPage } from './pages/portal/NoticesPage';
 import { TimetablePage } from './pages/portal/TimetablePage';
 import { PWAInstallBanner } from './components/common/PWAInstallBanner';
 import { DynamicPWATheme } from './components/common/DynamicPWATheme';
+import { RootRedirect } from './components/common/RootRedirect';
 
 export const App: React.FC = () => {
   return (
@@ -87,8 +88,9 @@ export const App: React.FC = () => {
             <Route path="/m/:tenantSlug/parent/notices" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PARENT']}><ModuleGuard moduleKey="notices"><NoticesPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/parent/timetable" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PARENT']}><ModuleGuard moduleKey="timetable"><TimetablePage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
 
-            {/* Catch-all redirect */}
-            <Route path="*" element={<Navigate to="/core/login" replace />} />
+            {/* Root & Catch-all isolated tenant redirect */}
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="*" element={<RootRedirect />} />
           </Routes>
         </BrowserRouter>
       </TenantProvider>
