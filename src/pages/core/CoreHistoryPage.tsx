@@ -142,16 +142,16 @@ export const CoreHistoryPage: React.FC = () => {
       <div style={{ display: 'flex', flex: 1 }}>
         <Sidebar />
 
-        <main style={{ flex: 1, padding: '28px 32px 80px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+        <main style={{ flex: 1, padding: '20px 16px 80px', maxWidth: '1400px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           {/* Header Title Section */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
+            <div style={{ minWidth: 0, flex: '1 1 280px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(123, 37, 37, 0.1)', color: '#7B2525', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(123, 37, 37, 0.1)', color: '#7B2525', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <History size={22} />
                 </div>
-                <div>
-                  <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#252525', margin: 0 }}>
+                <div style={{ minWidth: 0 }}>
+                  <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#252525', margin: 0, whiteSpace: 'normal', wordBreak: 'break-word' }}>
                     Platform History & Audit Trail
                   </h1>
                   <p style={{ fontSize: '13px', color: '#666666', marginTop: '2px' }}>
@@ -161,11 +161,26 @@ export const CoreHistoryPage: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* TOP ACTION BUTTONS - SMOOTH HORIZONTAL SLIDE ON MOBILE */}
+            <div 
+              className="no-scrollbar"
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                overflowX: 'auto', 
+                maxWidth: '100%', 
+                WebkitOverflowScrolling: 'touch',
+                paddingBottom: '4px',
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none',
+                flexShrink: 0
+              }}
+            >
               <button 
                 onClick={handleClearLogs}
                 className="btn btn-outline" 
-                style={{ gap: '6px', fontSize: '13px', color: '#DC2626', borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' }}
+                style={{ gap: '6px', fontSize: '13px', color: '#DC2626', borderColor: '#FCA5A5', backgroundColor: '#FEF2F2', flexShrink: 0, whiteSpace: 'nowrap' }}
                 title="Clear all local history logs"
               >
                 <Trash2 size={15} />
@@ -175,7 +190,7 @@ export const CoreHistoryPage: React.FC = () => {
               <button 
                 onClick={loadHistoryData} 
                 className="btn btn-outline" 
-                style={{ gap: '6px', fontSize: '13px' }}
+                style={{ gap: '6px', fontSize: '13px', flexShrink: 0, whiteSpace: 'nowrap' }}
                 title="Refresh Audit Logs"
               >
                 <RefreshCw size={15} className={loading ? 'spin' : ''} />
@@ -186,7 +201,7 @@ export const CoreHistoryPage: React.FC = () => {
                 onClick={exportToCSV} 
                 disabled={filteredLogs.length === 0}
                 className="btn btn-primary" 
-                style={{ gap: '8px', backgroundColor: '#059669', borderColor: '#059669', fontSize: '13px', fontWeight: 600 }}
+                style={{ gap: '8px', backgroundColor: '#059669', borderColor: '#059669', fontSize: '13px', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}
               >
                 <Download size={16} />
                 <span>Export CSV Report</span>
@@ -195,42 +210,42 @@ export const CoreHistoryPage: React.FC = () => {
           </div>
 
           {/* Metric Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-            <div className="card" style={{ padding: '18px 20px', backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E5E7EB' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Logged Events</div>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: '#111827', marginTop: '6px' }}>{logs.length}</div>
-              <div style={{ fontSize: '11px', color: '#059669', fontWeight: 600, marginTop: '4px' }}>⚡ Real-time Pin-to-Pin Tracking</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+            <div className="card" style={{ padding: '16px 18px', backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E5E7EB' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Logged Events</div>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#111827', marginTop: '4px' }}>{logs.length}</div>
+              <div style={{ fontSize: '11px', color: '#059669', fontWeight: 600, marginTop: '4px' }}>⚡ Real-time Tracking</div>
             </div>
 
-            <div className="card" style={{ padding: '18px 20px', backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E5E7EB' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Madrasas Monitored</div>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: '#7B2525', marginTop: '6px' }}>{tenants.length}</div>
-              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>Multi-Tenant SaaS Coverage</div>
+            <div className="card" style={{ padding: '16px 18px', backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E5E7EB' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Madrasas Monitored</div>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#7B2525', marginTop: '4px' }}>{tenants.length}</div>
+              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>Multi-Tenant Coverage</div>
             </div>
 
-            <div className="card" style={{ padding: '18px 20px', backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E5E7EB' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Filtered Events</div>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: '#2563EB', marginTop: '6px' }}>{filteredLogs.length}</div>
-              <div style={{ fontSize: '11px', color: '#2563EB', fontWeight: 600, marginTop: '4px' }}>Matching Current Filters</div>
+            <div className="card" style={{ padding: '16px 18px', backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E5E7EB' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Filtered Events</div>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>{filteredLogs.length}</div>
+              <div style={{ fontSize: '11px', color: '#2563EB', fontWeight: 600, marginTop: '4px' }}>Matching Filters</div>
             </div>
 
-            <div className="card" style={{ padding: '18px 20px', backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E5E7EB' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Security Audit Status</div>
-              <div style={{ fontSize: '16px', fontWeight: 700, color: '#059669', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <CheckCircle2 size={18} />
+            <div className="card" style={{ padding: '16px 18px', backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E5E7EB' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Security Status</div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#059669', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle2 size={16} />
                 <span>100% Encrypted</span>
               </div>
-              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>Role-based Access Logging</div>
+              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>Role-based Access</div>
             </div>
           </div>
 
           {/* Controls Bar: Stylish Madrasa Dropdown + Category Tabs + Search */}
-          <div className="card" style={{ backgroundColor: '#FFF', borderRadius: '16px', padding: '20px', border: '1px solid #E5E7EB', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="card" style={{ backgroundColor: '#FFF', borderRadius: '16px', padding: '18px 16px', border: '1px solid #E5E7EB', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
               
               {/* STYLISH MADRASA DROPDOWN SELECTOR */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '280px', flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#7B2525' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 260px', minWidth: 0, width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#7B2525', flexShrink: 0 }}>
                   <Building2 size={18} />
                   <span>Madrasa:</span>
                 </div>
@@ -246,7 +261,9 @@ export const CoreHistoryPage: React.FC = () => {
                     color: '#252525',
                     borderRadius: '10px',
                     padding: '9px 12px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    width: '100%',
+                    minWidth: 0
                   }}
                 >
                   <option value="ALL">🌐 All Madrasas (Global Core Platform)</option>
@@ -259,7 +276,7 @@ export const CoreHistoryPage: React.FC = () => {
               </div>
 
               {/* SEARCH INPUT */}
-              <div style={{ position: 'relative', width: '320px' }}>
+              <div style={{ position: 'relative', flex: '1 1 260px', minWidth: 0, width: '100%' }}>
                 <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                 <input
                   type="text"
@@ -267,14 +284,30 @@ export const CoreHistoryPage: React.FC = () => {
                   placeholder="Search by User, Email, Action, or Pin Details..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  style={{ paddingLeft: '36px', borderRadius: '10px', fontSize: '13px' }}
+                  style={{ paddingLeft: '36px', borderRadius: '10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
 
-            {/* CATEGORY FILTER PILL TABS */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #F3F4F6' }}>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', marginRight: '6px' }}>Category:</span>
+            {/* CATEGORY FILTER PILL TABS - SMOOTH HORIZONTAL SLIDE ON MOBILE */}
+            <div 
+              className="no-scrollbar"
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                overflowX: 'auto', 
+                maxWidth: '100%',
+                WebkitOverflowScrolling: 'touch',
+                marginTop: '16px', 
+                paddingTop: '14px', 
+                borderTop: '1px solid #F3F4F6',
+                paddingBottom: '4px',
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none'
+              }}
+            >
+              <span style={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', marginRight: '4px', flexShrink: 0 }}>Category:</span>
               {[
                 { id: 'ALL', label: 'All History' },
                 { id: 'AUTHENTICATION', label: '🔑 Auth & Logins' },
@@ -296,6 +329,8 @@ export const CoreHistoryPage: React.FC = () => {
                     color: selectedCategory === cat.id ? '#FFFFFF' : '#4B5563',
                     border: 'none',
                     cursor: 'pointer',
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
                     transition: 'all 0.15s ease'
                   }}
                 >
