@@ -90,7 +90,7 @@ export const DynamicPWATheme: React.FC = () => {
       display: "standalone",
       theme_color: primaryColor,
       background_color: "#F7F5F2",
-      orientation: "portrait",
+      orientation: "portrait-primary",
       description: description,
       icons: [
         {

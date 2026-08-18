@@ -5,7 +5,7 @@
   "display": "standalone",
   "theme_color": "#7B2525",
   "background_color": "#F7F5F2",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "description": "Multi-tenant Madrasa Management SaaS Platform",
   "icons": [
     {

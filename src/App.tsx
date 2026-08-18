@@ -32,6 +32,7 @@ import { NoticesPage } from './pages/portal/NoticesPage';
 import { TimetablePage } from './pages/portal/TimetablePage';
 import { PWAInstallBanner } from './components/common/PWAInstallBanner';
 import { DynamicPWATheme } from './components/common/DynamicPWATheme';
+import { MobileOrientationGuard } from './components/common/MobileOrientationGuard';
 import { RootRedirect } from './components/common/RootRedirect';
 
 export const App: React.FC = () => {
@@ -40,6 +41,7 @@ export const App: React.FC = () => {
       <TenantProvider>
         <BrowserRouter>
           <DynamicPWATheme />
+          <MobileOrientationGuard />
           <PWAInstallBanner />
           <Routes>
             {/* Setup & Core Super Admin Routes */}
