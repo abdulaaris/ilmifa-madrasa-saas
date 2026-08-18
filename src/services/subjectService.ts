@@ -63,10 +63,19 @@ export const subjectService = {
     const localKey = `subjects_${tenantId}`;
     const existing: MadrasaSubject[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     const idx = existing.findIndex(s => s.id === subjectId);
+    const oldSubject = idx >= 0 ? { ...existing[idx] } : null;
     if (idx >= 0) {
       existing[idx] = { ...existing[idx], ...updates };
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'SUBJECT_UPDATED',
+      actionCategory: 'ACADEMIC',
+      details: `Modified Subject — Past: '${oldSubject?.name || 'N/A'}' (Code: ${oldSubject?.code || 'N/A'}) ➔ Present: '${updates.name || oldSubject?.name || 'N/A'}' (Code: ${updates.code || oldSubject?.code || 'N/A'})`
+    });
   },
 
   async deleteSubject(tenantId: string, subjectId: string): Promise<void> {
@@ -78,7 +87,16 @@ export const subjectService = {
 
     const localKey = `subjects_${tenantId}`;
     const existing: MadrasaSubject[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const target = existing.find(s => s.id === subjectId);
     const filtered = existing.filter(s => s.id !== subjectId);
     localStorage.setItem(localKey, JSON.stringify(filtered));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'SUBJECT_DELETED',
+      actionCategory: 'ACADEMIC',
+      details: `Deleted Subject '${target?.name || subjectId}' (Code: ${target?.code || 'N/A'})`
+    });
   }
 };

@@ -91,6 +91,31 @@ export const teacherService = {
       existing[idx] = { ...existing[idx], ...updates };
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+
+    // Build comprehensive Past ➔ Present change details
+    const changes: string[] = [];
+    if (target) {
+      if (updates.name && updates.name !== target.name) changes.push(`Name: '${target.name}' ➔ '${updates.name}'`);
+      if (updates.email && updates.email !== target.email) changes.push(`Email: '${target.email}' ➔ '${updates.email}'`);
+      if (updates.mobile && updates.mobile !== target.mobile) changes.push(`Mobile: '${target.mobile}' ➔ '${updates.mobile}'`);
+      if (updates.status && updates.status !== target.status) changes.push(`Status: '${target.status}' ➔ '${updates.status}'`);
+      if (updates.assignedClasses && JSON.stringify(updates.assignedClasses) !== JSON.stringify(target.assignedClasses)) changes.push(`Classes: [${target.assignedClasses?.join(', ') || 'None'}] ➔ [${updates.assignedClasses.join(', ')}]`);
+      if (updates.subjects && JSON.stringify(updates.subjects) !== JSON.stringify(target.subjects)) changes.push(`Subjects: [${target.subjects?.join(', ') || 'None'}] ➔ [${updates.subjects.join(', ')}]`);
+    }
+
+    if (changes.length === 0 && target) {
+      return;
+    }
+
+    const changeDesc = changes.length > 0 ? changes.join(', ') : 'profile fields updated';
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'TEACHER_UPDATED',
+      actionCategory: 'ADMINISTRATION',
+      details: `Modified Teacher '${updates.name || target?.name || teacherId}' — ${changeDesc}`
+    });
   },
 
   async deleteTeacher(tenantId: string, teacherId: string): Promise<void> {
@@ -113,5 +138,13 @@ export const teacherService = {
 
     const filtered = existing.filter(t => t.id !== teacherId);
     localStorage.setItem(localKey, JSON.stringify(filtered));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'TEACHER_DELETED',
+      actionCategory: 'ADMINISTRATION',
+      details: `Deleted Teacher record '${target?.name || teacherId}' (${target?.email || 'N/A'})`
+    });
   }
 };

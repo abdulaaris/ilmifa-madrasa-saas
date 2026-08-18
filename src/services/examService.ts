@@ -1,6 +1,7 @@
-import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { ExamRecord, ExamResult } from '../types';
+import { auditService } from './auditService';
 
 export const examService = {
   async createExam(tenantId: string, data: Omit<ExamRecord, 'id' | 'tenantId' | 'createdAt'>): Promise<ExamRecord> {
@@ -22,6 +23,14 @@ export const examService = {
     const existing: ExamRecord[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     existing.push(exam);
     localStorage.setItem(localKey, JSON.stringify(existing));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'EXAM_CREATED',
+      actionCategory: 'ACADEMIC',
+      details: `Scheduled new Exam '${exam.title}' for Subject '${exam.subject}' (${exam.examDate}, Max Marks: ${exam.maxMarks})`
+    });
 
     return exam;
   },
@@ -49,10 +58,19 @@ export const examService = {
     const localKey = `exams_${tenantId}`;
     const existing: ExamRecord[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     const idx = existing.findIndex(e => e.id === examId);
+    const oldExam = idx >= 0 ? { ...existing[idx] } : null;
     if (idx >= 0) {
       existing[idx] = { ...existing[idx], ...updates };
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'EXAM_UPDATED',
+      actionCategory: 'ACADEMIC',
+      details: `Modified Exam — Past: '${oldExam?.title || 'N/A'}' (Subject: ${oldExam?.subject || 'N/A'}, Date: ${oldExam?.examDate || 'N/A'}, Max Marks: ${oldExam?.maxMarks || 'N/A'}) ➔ Present: '${updates.title || oldExam?.title || 'N/A'}' (Subject: ${updates.subject || oldExam?.subject || 'N/A'}, Date: ${updates.examDate || oldExam?.examDate || 'N/A'}, Max Marks: ${updates.maxMarks || oldExam?.maxMarks || 'N/A'})`
+    });
   },
 
   async deleteExam(tenantId: string, examId: string): Promise<void> {
@@ -64,8 +82,17 @@ export const examService = {
 
     const localKey = `exams_${tenantId}`;
     const existing: ExamRecord[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const target = existing.find(e => e.id === examId);
     const filtered = existing.filter(e => e.id !== examId);
     localStorage.setItem(localKey, JSON.stringify(filtered));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'EXAM_DELETED',
+      actionCategory: 'ACADEMIC',
+      details: `Deleted Exam '${target?.title || examId}' (Subject: ${target?.subject || 'N/A'}, Date: ${target?.examDate || 'N/A'})`
+    });
   },
 
   async saveResult(tenantId: string, data: Omit<ExamResult, 'id' | 'tenantId' | 'percentage' | 'grade' | 'createdAt'>): Promise<ExamResult> {
@@ -80,13 +107,25 @@ export const examService = {
     else if (percentage >= 60) grade = 'C';
     else if (percentage >= 50) grade = 'D';
 
+    // 1. Query existing results for this exam to check if this student's result actually CHANGED
+    const existingExamResults = await this.getResultsByExam(tenantId, data.examId);
+    const oldRecord = existingExamResults.find(
+      r => r.studentId === data.studentId && 
+           (r.subject === data.subject || (!r.subject && (data.subject === 'General' || !data.subject)))
+    );
+
+    const isNew = !oldRecord;
+    const marksChanged = oldRecord && oldRecord.obtainedMarks !== undefined && Number(oldRecord.obtainedMarks) !== Number(data.obtainedMarks);
+    const remarksChanged = oldRecord && (oldRecord.remarks || '') !== (data.remarks || '');
+    const isModified = !isNew && (marksChanged || remarksChanged);
+
     const result: ExamResult = {
       ...data,
       id,
       tenantId,
       percentage,
       grade,
-      createdAt: new Date().toISOString()
+      createdAt: oldRecord?.createdAt || new Date().toISOString()
     };
 
     try {
@@ -102,7 +141,67 @@ export const examService = {
     else existing.push(result);
     localStorage.setItem(localKey, JSON.stringify(existing));
 
+    // CRITICAL REQUIREMENT: IF NOT NEW AND NOTHING CHANGED -> DO NOT CREATE HISTORY LOG!
+    if (!isNew && !isModified) {
+      return result;
+    }
+
+    if (isModified) {
+      const oldMarks = oldRecord ? Number(oldRecord.obtainedMarks) : 0;
+      const oldGrade = oldRecord?.grade || 'F';
+      const oldRemarks = oldRecord?.remarks || 'None';
+      const newRemarks = data.remarks || 'None';
+
+      let detailsMessage = '';
+      if (marksChanged && remarksChanged) {
+        detailsMessage = `Modified ${data.studentName}'s ${data.subject || 'General'} marks from ${oldMarks} to ${data.obtainedMarks} (Grade: ${oldGrade} ➔ ${grade}) & Updated Remarks from '${oldRemarks}' to '${newRemarks}' in '${data.examTitle}'`;
+      } else if (marksChanged) {
+        detailsMessage = `Modified ${data.studentName}'s ${data.subject || 'General'} marks from ${oldMarks} to ${data.obtainedMarks} out of ${data.maxMarks} in '${data.examTitle}' (Past Grade: ${oldGrade} ➔ Present Grade: ${grade})`;
+      } else if (remarksChanged) {
+        detailsMessage = `Updated Remarks for Student '${data.studentName}' in '${data.examTitle}' (${data.subject || 'General'}) — Past Remarks: '${oldRemarks}' ➔ Present Remarks: '${newRemarks}'`;
+      }
+
+      // Real-time Audit History Log for modified student ONLY
+      await auditService.logActivity({
+        tenantId: tenantId,
+        action: 'EXAM_MARKS_MODIFIED',
+        actionCategory: 'ACADEMIC',
+        details: detailsMessage
+      });
+    } else if (isNew) {
+      const detailsMessage = `Recorded new exam marks for Student '${data.studentName}' in '${data.examTitle}' (Subject: ${data.subject || 'General'}) — Marks: ${data.obtainedMarks}/${data.maxMarks} (Grade: ${grade}) ${data.remarks ? `| Remarks: '${data.remarks}'` : ''}`;
+
+      // Real-time Audit History Log for new student record ONLY
+      await auditService.logActivity({
+        tenantId: tenantId,
+        action: 'EXAM_MARKS_RECORDED',
+        actionCategory: 'ACADEMIC',
+        details: detailsMessage
+      });
+    }
+
     return result;
+  },
+
+  async deleteResult(tenantId: string, resultId: string, studentName?: string, examTitle?: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'madrasas', tenantId, 'results', resultId));
+    } catch (e) {
+      console.warn('Firestore deleteResult fallback:', e);
+    }
+
+    const localKey = `results_${tenantId}`;
+    const existing: ExamResult[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const filtered = existing.filter(r => r.id !== resultId);
+    localStorage.setItem(localKey, JSON.stringify(filtered));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'EXAM_MARKS_DELETED',
+      actionCategory: 'ACADEMIC',
+      details: `Deleted exam marks record ${studentName ? `for Student '${studentName}'` : ''} ${examTitle ? `in '${examTitle}'` : `(ID: ${resultId})`}`
+    });
   },
 
   async getResultsByStudent(tenantId: string, studentId: string): Promise<ExamResult[]> {
@@ -130,7 +229,7 @@ export const examService = {
         const res = d.data() as ExamResult;
         if (res.examId === examId) list.push(res);
       });
-      return list;
+      if (list.length > 0) return list;
     } catch (e) {
       console.warn('Firestore getResultsByExam fallback:', e);
     }

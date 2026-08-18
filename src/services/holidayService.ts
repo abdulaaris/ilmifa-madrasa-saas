@@ -1,6 +1,7 @@
 import { collection, doc, setDoc, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { MadrasaHoliday } from '../types';
+import { auditService } from './auditService';
 
 export const holidayService = {
   /**
@@ -36,6 +37,14 @@ export const holidayService = {
     existing.push(holiday);
     localStorage.setItem(localKey, JSON.stringify(existing));
 
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'HOLIDAY_DECLARED',
+      actionCategory: 'ACADEMIC',
+      details: `Declared Holiday '${holiday.title}' on ${holiday.date}`
+    });
+
     return holiday;
   },
 
@@ -61,8 +70,17 @@ export const holidayService = {
 
     const localKey = `holidays_${tenantId}`;
     const existing: MadrasaHoliday[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const target = existing.find(h => h.id === holidayId);
     const filtered = existing.filter(h => h.id !== holidayId);
     localStorage.setItem(localKey, JSON.stringify(filtered));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'HOLIDAY_DELETED',
+      actionCategory: 'ACADEMIC',
+      details: `Deleted Holiday '${target?.title || holidayId}' (Date: ${target?.date || 'N/A'})`
+    });
   },
 
   /**

@@ -108,7 +108,7 @@ export const auditService = {
     const resolvedTenantName = params.tenantName || this.getTenantNameHelper(resolvedTenantId);
 
     const logItem: AuditLog = {
-      id: `log-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       tenantId: resolvedTenantId,
       tenantName: resolvedTenantName,
       timestamp: new Date().toISOString(),

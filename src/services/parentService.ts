@@ -2,6 +2,7 @@ import { collection, doc, setDoc, getDocs, getDoc, updateDoc } from 'firebase/fi
 import { db } from '../config/firebase';
 import { Parent } from '../types';
 import { userService } from './userService';
+import { auditService } from './auditService';
 
 export const parentService = {
   async createParent(
@@ -41,6 +42,14 @@ export const parentService = {
     const existing: Parent[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     existing.push(parent);
     localStorage.setItem(localKey, JSON.stringify(existing));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'PARENT_REGISTERED',
+      actionCategory: 'ADMINISTRATION',
+      details: `Registered Parent '${parent.name}' (${parent.relationship}, Email: ${parent.email}, Mobile: ${parent.mobile})`
+    });
 
     return parent;
   },
@@ -91,10 +100,36 @@ export const parentService = {
     const localKey = `parents_${tenantId}`;
     const existing: Parent[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     const idx = existing.findIndex(p => p.id === parentId);
+    let targetParent: Parent | null = null;
     if (idx >= 0) {
+      targetParent = existing[idx];
       existing[idx] = { ...existing[idx], ...updates };
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+
+    // Build comprehensive Past ➔ Present change details
+    const changes: string[] = [];
+    if (targetParent) {
+      if (updates.name && updates.name !== targetParent.name) changes.push(`Name: '${targetParent.name}' ➔ '${updates.name}'`);
+      if (updates.email && updates.email !== targetParent.email) changes.push(`Email: '${targetParent.email}' ➔ '${updates.email}'`);
+      if (updates.mobile && updates.mobile !== targetParent.mobile) changes.push(`Mobile: '${targetParent.mobile}' ➔ '${updates.mobile}'`);
+      if (updates.relationship && updates.relationship !== targetParent.relationship) changes.push(`Relationship: '${targetParent.relationship}' ➔ '${updates.relationship}'`);
+      if (updates.studentIds && JSON.stringify(updates.studentIds) !== JSON.stringify(targetParent.studentIds)) changes.push(`Linked Students: [${targetParent.studentIds?.join(', ') || 'None'}] ➔ [${updates.studentIds.join(', ')}]`);
+    }
+
+    if (changes.length === 0 && targetParent) {
+      return;
+    }
+
+    const changeDesc = changes.length > 0 ? changes.join(', ') : 'profile fields updated';
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'PARENT_UPDATED',
+      actionCategory: 'ADMINISTRATION',
+      details: `Modified Parent '${updates.name || targetParent?.name || parentId}' — ${changeDesc}`
+    });
   },
 
   async deleteParent(tenantId: string, parentId: string): Promise<void> {
@@ -128,5 +163,13 @@ export const parentService = {
 
     const filtered = existing.filter(p => p.id !== parentId);
     localStorage.setItem(localKey, JSON.stringify(filtered));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'PARENT_DELETED',
+      actionCategory: 'ADMINISTRATION',
+      details: `Deleted Parent record for '${target?.name || parentId}' (${target?.email || 'N/A'})`
+    });
   }
 };

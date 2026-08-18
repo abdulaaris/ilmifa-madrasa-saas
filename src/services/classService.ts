@@ -58,10 +58,19 @@ export const classService = {
     const localKey = `classes_${tenantId}`;
     const existing: MadrasaClass[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     const idx = existing.findIndex(c => c.id === classId);
+    const oldClass = idx >= 0 ? { ...existing[idx] } : null;
     if (idx >= 0) {
       existing[idx] = { ...existing[idx], ...updates };
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'CLASS_UPDATED',
+      actionCategory: 'ACADEMIC',
+      details: `Modified Class — Past: '${oldClass?.name || 'N/A'}' (Section: ${oldClass?.section || 'N/A'}) ➔ Present: '${updates.name || oldClass?.name || 'N/A'}' (Section: ${updates.section || oldClass?.section || 'N/A'})`
+    });
   },
 
   async deleteClass(tenantId: string, classId: string): Promise<void> {
@@ -73,7 +82,16 @@ export const classService = {
 
     const localKey = `classes_${tenantId}`;
     const existing: MadrasaClass[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const target = existing.find(c => c.id === classId);
     const filtered = existing.filter(c => c.id !== classId);
     localStorage.setItem(localKey, JSON.stringify(filtered));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'CLASS_DELETED',
+      actionCategory: 'ACADEMIC',
+      details: `Deleted Class '${target?.name || classId}' (Section: ${target?.section || 'N/A'})`
+    });
   }
 };

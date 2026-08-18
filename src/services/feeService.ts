@@ -70,8 +70,10 @@ export const feeService = {
     const localKey = `fees_${tenantId}`;
     const existing: FeeRecord[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     const idx = existing.findIndex(f => f.id === feeId);
+    const oldFee = idx >= 0 ? { ...existing[idx] } : null;
+    let merged: FeeRecord | null = null;
     if (idx >= 0) {
-      const merged = { ...existing[idx], ...updates };
+      merged = { ...existing[idx], ...updates };
       merged.balance = merged.feeAmount - merged.paidAmount;
       if (merged.balance <= 0) merged.status = 'paid';
       else if (merged.paidAmount > 0) merged.status = 'partial';
@@ -80,6 +82,14 @@ export const feeService = {
       existing[idx] = merged;
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'FEE_PAYMENT_COLLECTED',
+      actionCategory: 'FINANCE',
+      details: `Modified Fee Record for '${oldFee?.studentName || 'Student'}' (${oldFee?.month || 'N/A'}) — Past: Paid ₹${oldFee?.paidAmount || 0} / ₹${oldFee?.feeAmount || 0} (${oldFee?.status || 'pending'}) ➔ Present: Paid ₹${merged?.paidAmount} / ₹${merged?.feeAmount} (${merged?.status})`
+    });
   },
 
   async deleteFeeRecord(tenantId: string, feeId: string): Promise<void> {
@@ -91,7 +101,16 @@ export const feeService = {
 
     const localKey = `fees_${tenantId}`;
     const existing: FeeRecord[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const target = existing.find(f => f.id === feeId);
     const filtered = existing.filter(f => f.id !== feeId);
     localStorage.setItem(localKey, JSON.stringify(filtered));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'FEE_RECORD_DELETED',
+      actionCategory: 'FINANCE',
+      details: `Deleted Fee Record for '${target?.studentName || 'Student'}' (${target?.month || 'N/A'}, ₹${target?.feeAmount || 0})`
+    });
   }
 };

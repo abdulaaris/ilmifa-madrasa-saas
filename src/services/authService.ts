@@ -8,6 +8,7 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { UserProfile, UserRole } from '../types';
+import { auditService } from './auditService';
 
 export const authService = {
   /**
@@ -34,6 +35,18 @@ export const authService = {
       throw new Error(`Account is currently ${profile.status}. Please contact system administrator.`);
     }
 
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: profile.tenantId || 'CORE',
+      userId: profile.uid,
+      userName: profile.displayName || profile.email,
+      userRole: profile.role,
+      userEmail: profile.email,
+      action: 'USER_LOGIN',
+      actionCategory: 'AUTHENTICATION',
+      details: `${profile.role} User '${profile.displayName || profile.email}' logged into portal`
+    });
+
     return profile;
   },
 
@@ -41,8 +54,16 @@ export const authService = {
    * Logout user and clear local session state
    */
   async logout(): Promise<void> {
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      action: 'USER_LOGOUT',
+      actionCategory: 'AUTHENTICATION',
+      details: `User signed out of active session`
+    });
+
     await firebaseSignOut(auth);
     localStorage.removeItem('ilmifa_active_tenant');
+    localStorage.removeItem('ilmifa_current_user');
   },
 
   /**

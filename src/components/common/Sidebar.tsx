@@ -55,12 +55,17 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="desktop-only" style={{
       width: '240px',
+      minWidth: '240px',
       backgroundColor: '#FFFFFF',
       borderRight: '1px solid #E5E7EB',
       display: 'flex',
       flexDirection: 'column',
       padding: '16px 12px',
-      minHeight: 'calc(100vh - 64px)'
+      position: 'sticky',
+      top: '64px',
+      height: 'calc(100vh - 64px)',
+      overflowY: 'auto',
+      zIndex: 30
     }}>
       <nav style={{ flex: 1 }}>
         {/* SUPER ADMIN CORE NAVIGATION (When on /core/*) */}

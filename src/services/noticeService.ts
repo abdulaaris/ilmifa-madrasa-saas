@@ -1,6 +1,7 @@
 import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Notice, UserRole } from '../types';
+import { auditService } from './auditService';
 
 export const noticeService = {
   async createNotice(tenantId: string, data: Omit<Notice, 'id' | 'tenantId' | 'createdAt'>): Promise<Notice> {
@@ -22,6 +23,14 @@ export const noticeService = {
     const existing: Notice[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     existing.unshift(notice);
     localStorage.setItem(localKey, JSON.stringify(existing));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'NOTICE_PUBLISHED',
+      actionCategory: 'ADMINISTRATION',
+      details: `Published Notice '${notice.title}' for ${notice.targetAudience.toUpperCase()}`
+    });
 
     return notice;
   },
@@ -54,10 +63,19 @@ export const noticeService = {
     const localKey = `notices_${tenantId}`;
     const existing: Notice[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     const idx = existing.findIndex(n => n.id === noticeId);
+    const oldNotice = idx >= 0 ? { ...existing[idx] } : null;
     if (idx >= 0) {
       existing[idx] = { ...existing[idx], ...updates };
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'NOTICE_UPDATED',
+      actionCategory: 'ADMINISTRATION',
+      details: `Modified Notice — Past: '${oldNotice?.title || 'N/A'}' (Target: ${oldNotice?.targetAudience || 'all'}) ➔ Present: '${updates.title || oldNotice?.title || 'N/A'}' (Target: ${updates.targetAudience || oldNotice?.targetAudience || 'all'})`
+    });
   },
 
   async deleteNotice(tenantId: string, noticeId: string): Promise<void> {
@@ -69,7 +87,16 @@ export const noticeService = {
 
     const localKey = `notices_${tenantId}`;
     const existing: Notice[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const target = existing.find(n => n.id === noticeId);
     const filtered = existing.filter(n => n.id !== noticeId);
     localStorage.setItem(localKey, JSON.stringify(filtered));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'NOTICE_DELETED',
+      actionCategory: 'ADMINISTRATION',
+      details: `Deleted Notice '${target?.title || noticeId}' (Target: ${target?.targetAudience || 'all'})`
+    });
   }
 };

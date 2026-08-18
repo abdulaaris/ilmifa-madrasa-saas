@@ -2,6 +2,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc } from 'firebase/firestore';
 import { db, getSecondaryAuth } from '../config/firebase';
 import { UserProfile, UserRole, UserStatus } from '../types';
+import { auditService } from './auditService';
 
 export const userService = {
   /**
@@ -45,6 +46,14 @@ export const userService = {
 
     // Sign out secondary auth context so it stays clean
     await secondaryAuth.signOut();
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId || 'CORE',
+      action: 'USER_CREATED',
+      actionCategory: 'ADMINISTRATION',
+      details: `Created new ${role} user account for ${displayName} (${email})`
+    });
 
     return userProfile;
   },

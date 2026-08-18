@@ -58,10 +58,39 @@ export const studentService = {
     const localKey = `students_${tenantId}`;
     const existing: Student[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     const idx = existing.findIndex(s => s.id === studentId);
+    let oldStudent: Student | null = null;
     if (idx >= 0) {
+      oldStudent = { ...existing[idx] };
       existing[idx] = { ...existing[idx], ...updates };
       localStorage.setItem(localKey, JSON.stringify(existing));
     }
+
+    // Build comprehensive Past ➔ Present change details
+    const changes: string[] = [];
+    if (oldStudent) {
+      if (updates.name && updates.name !== oldStudent.name) changes.push(`Name: '${oldStudent.name}' ➔ '${updates.name}'`);
+      if (updates.classId && updates.classId !== oldStudent.classId) changes.push(`Class: '${oldStudent.classId}' ➔ '${updates.classId}'`);
+      if (updates.status && updates.status !== oldStudent.status) changes.push(`Status: '${oldStudent.status.toUpperCase()}' ➔ '${updates.status.toUpperCase()}'`);
+      if (updates.rollNumber !== undefined && updates.rollNumber !== oldStudent.rollNumber) changes.push(`Roll No: '${oldStudent.rollNumber || 'N/A'}' ➔ '${updates.rollNumber || 'N/A'}'`);
+      if (updates.parentPhone !== undefined && updates.parentPhone !== oldStudent.parentPhone) changes.push(`Parent Phone: '${oldStudent.parentPhone || 'N/A'}' ➔ '${updates.parentPhone || 'N/A'}'`);
+      if (updates.guardianName !== undefined && updates.guardianName !== oldStudent.guardianName) changes.push(`Guardian: '${oldStudent.guardianName || 'N/A'}' ➔ '${updates.guardianName || 'N/A'}'`);
+      if (updates.address !== undefined && updates.address !== oldStudent.address) changes.push(`Address: '${oldStudent.address || 'N/A'}' ➔ '${updates.address || 'N/A'}'`);
+    }
+
+    // If nothing actually changed, don't log
+    if (changes.length === 0 && oldStudent) {
+      return;
+    }
+
+    const changeDesc = changes.length > 0 ? changes.join(', ') : 'profile fields updated';
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'STUDENT_UPDATED',
+      actionCategory: 'ACADEMIC',
+      details: `Modified Student '${updates.name || oldStudent?.name || studentId}' — ${changeDesc}`
+    });
   },
 
   async deleteStudent(tenantId: string, studentId: string): Promise<void> {
@@ -73,7 +102,16 @@ export const studentService = {
 
     const localKey = `students_${tenantId}`;
     const existing: Student[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const target = existing.find(s => s.id === studentId);
     const filtered = existing.filter(s => s.id !== studentId);
     localStorage.setItem(localKey, JSON.stringify(filtered));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'STUDENT_DELETED',
+      actionCategory: 'ACADEMIC',
+      details: `Deleted Student '${target?.name || studentId}' (Code: ${target?.studentCode || 'N/A'}, Class: ${target?.classId || 'N/A'})`
+    });
   }
 };
