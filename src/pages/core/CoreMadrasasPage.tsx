@@ -7,7 +7,7 @@ import { Header } from '../../components/common/Header';
 import { Sidebar } from '../../components/common/Sidebar';
 import { MobileNav } from '../../components/common/MobileNav';
 import { CreateMadrasaModal } from '../../components/superadmin/CreateMadrasaModal';
-import { Plus, Search, ExternalLink, Settings2, Check, Edit2, X, Lock, Unlock } from 'lucide-react';
+import { Plus, Search, ExternalLink, Settings2, Check, Edit2, X, Lock, Unlock, Copy } from 'lucide-react';
 
 export const CoreMadrasasPage: React.FC = () => {
   const [tenants, setTenants] = useState<MadrasaTenant[]>([]);
@@ -15,6 +15,18 @@ export const CoreMadrasasPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Copy portal link feedback state
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyPortalLink = (t: MadrasaTenant) => {
+    const portalUrl = `${window.location.origin}/m/${t.slug}/login`;
+    navigator.clipboard.writeText(portalUrl);
+    setCopiedId(t.id);
+    setTimeout(() => {
+      setCopiedId(null);
+    }, 2000);
+  };
 
   // Module edit state
   const [selectedTenant, setSelectedTenant] = useState<MadrasaTenant | null>(null);
@@ -296,8 +308,8 @@ export const CoreMadrasasPage: React.FC = () => {
                           )}
                         </td>
                         <td>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button onClick={() => openEditMadrasaModal(t)} className="btn btn-outline btn-sm" title="Edit Madrasa">
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
+                            <button onClick={() => openEditMadrasaModal(t)} className="btn btn-outline btn-sm" title="Edit Madrasa Details">
                               <Edit2 size={14} />
                               <span>Edit</span>
                             </button>
@@ -307,10 +319,25 @@ export const CoreMadrasasPage: React.FC = () => {
                               rel="noreferrer"
                               className="btn btn-outline btn-sm"
                               style={{ gap: '4px', textDecoration: 'none' }}
+                              title="Open Customer Madrasa Portal"
                             >
                               <ExternalLink size={14} />
                               <span>Portal</span>
                             </a>
+                            <button 
+                              onClick={() => handleCopyPortalLink(t)} 
+                              className="btn btn-outline btn-sm"
+                              style={{ 
+                                gap: '4px', 
+                                borderColor: copiedId === t.id ? '#059669' : undefined,
+                                backgroundColor: copiedId === t.id ? '#ECFDF5' : undefined,
+                                color: copiedId === t.id ? '#059669' : undefined
+                              }}
+                              title="Copy Portal Login URL to Clipboard"
+                            >
+                              {copiedId === t.id ? <Check size={14} /> : <Copy size={14} />}
+                              <span>{copiedId === t.id ? 'Copied!' : 'Copy'}</span>
+                            </button>
                           </div>
                         </td>
                       </tr>

@@ -73,6 +73,13 @@ export const DynamicPWATheme: React.FC = () => {
     }
     appleTouchLink.href = logoUrl;
 
+    // Enforce portrait mode via Screen Orientation API if supported
+    if (window.screen && (window.screen as any).orientation && typeof (window.screen as any).orientation.lock === 'function') {
+      (window.screen as any).orientation.lock('portrait').catch(() => {
+        // Safe catch if browser requires full screen gesture first
+      });
+    }
+
     // Dynamically generate W3C Isolated PWA Manifest per Tenant / Core Admin
     const dynamicManifest = {
       id: appId,
@@ -83,7 +90,7 @@ export const DynamicPWATheme: React.FC = () => {
       display: "standalone",
       theme_color: primaryColor,
       background_color: "#F7F5F2",
-      orientation: "any",
+      orientation: "portrait",
       description: description,
       icons: [
         {
