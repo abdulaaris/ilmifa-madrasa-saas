@@ -70,11 +70,12 @@ export const studentService = {
     if (oldStudent) {
       if (updates.name && updates.name !== oldStudent.name) changes.push(`Name: '${oldStudent.name}' ➔ '${updates.name}'`);
       if (updates.classId && updates.classId !== oldStudent.classId) changes.push(`Class: '${oldStudent.classId}' ➔ '${updates.classId}'`);
+      if (updates.section && updates.section !== oldStudent.section) changes.push(`Section: '${oldStudent.section}' ➔ '${updates.section}'`);
       if (updates.status && updates.status !== oldStudent.status) changes.push(`Status: '${oldStudent.status.toUpperCase()}' ➔ '${updates.status.toUpperCase()}'`);
-      if (updates.rollNumber !== undefined && updates.rollNumber !== oldStudent.rollNumber) changes.push(`Roll No: '${oldStudent.rollNumber || 'N/A'}' ➔ '${updates.rollNumber || 'N/A'}'`);
+      if (updates.studentCode && updates.studentCode !== oldStudent.studentCode) changes.push(`Student Code: '${oldStudent.studentCode}' ➔ '${updates.studentCode}'`);
+      if (updates.parentName !== undefined && updates.parentName !== oldStudent.parentName) changes.push(`Parent: '${oldStudent.parentName || 'N/A'}' ➔ '${updates.parentName || 'N/A'}'`);
       if (updates.parentPhone !== undefined && updates.parentPhone !== oldStudent.parentPhone) changes.push(`Parent Phone: '${oldStudent.parentPhone || 'N/A'}' ➔ '${updates.parentPhone || 'N/A'}'`);
-      if (updates.guardianName !== undefined && updates.guardianName !== oldStudent.guardianName) changes.push(`Guardian: '${oldStudent.guardianName || 'N/A'}' ➔ '${updates.guardianName || 'N/A'}'`);
-      if (updates.address !== undefined && updates.address !== oldStudent.address) changes.push(`Address: '${oldStudent.address || 'N/A'}' ➔ '${updates.address || 'N/A'}'`);
+      if (updates.gender && updates.gender !== oldStudent.gender) changes.push(`Gender: '${oldStudent.gender}' ➔ '${updates.gender}'`);
     }
 
     // If nothing actually changed, don't log
