@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { tenantService } from '../../services/tenantService';
 import { userService } from '../../services/userService';
+import { auditService } from '../../services/auditService';
 import { MadrasaTenant, MadrasaStatus, MadrasaModule } from '../../types';
 import { ALL_MODULES } from '../../config/constants';
 import { Header } from '../../components/common/Header';
@@ -153,6 +154,19 @@ export const CoreMadrasasPage: React.FC = () => {
         });
       }
     }
+
+    // Record pin-to-pin Audit History entry
+    await auditService.logActivity({
+      tenantId: editingMadrasa.id,
+      tenantName: editName,
+      userId: 'usr-admin-01',
+      userName: 'Super Admin',
+      userRole: 'SUPER_ADMIN',
+      userEmail: 'admin@ilmifa.com',
+      action: 'MADRASA_UPDATED',
+      actionCategory: 'SETTINGS',
+      details: `Updated Madrasa '${editName}' details (Primary Color: ${editPrimaryColor}, Status: ${editStatus.toUpperCase()})`
+    });
 
     setSavingMadrasa(false);
     setEditingMadrasa(null);

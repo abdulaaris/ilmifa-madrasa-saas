@@ -1,6 +1,7 @@
 import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { MadrasaSubject } from '../types';
+import { auditService } from './auditService';
 
 export const subjectService = {
   async createSubject(
@@ -27,6 +28,14 @@ export const subjectService = {
     const existing: MadrasaSubject[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     existing.push(subject);
     localStorage.setItem(localKey, JSON.stringify(existing));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'SUBJECT_CREATED',
+      actionCategory: 'ACADEMIC',
+      details: `Created new Subject '${subject.name}' (Code: ${subject.code || 'N/A'})`
+    });
 
     return subject;
   },

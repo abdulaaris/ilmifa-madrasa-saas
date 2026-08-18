@@ -24,7 +24,8 @@ import {
   LogOut,
   Building2,
   Shield,
-  User
+  User,
+  History
 } from 'lucide-react';
 
 interface MobileDrawerProps {
@@ -180,6 +181,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
               <NavLink to="/core/users" onClick={onClose} style={linkStyle}>
                 <Users size={18} />
                 <span>All Users</span>
+              </NavLink>
+              <NavLink to="/core/history" onClick={onClose} style={linkStyle}>
+                <History size={18} />
+                <span>Activity History</span>
               </NavLink>
               <NavLink to="/core/settings" onClick={onClose} style={linkStyle}>
                 <Settings size={18} />

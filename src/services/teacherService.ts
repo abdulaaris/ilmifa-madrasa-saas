@@ -2,6 +2,7 @@ import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from 'firebase
 import { db } from '../config/firebase';
 import { Teacher } from '../types';
 import { userService } from './userService';
+import { auditService } from './auditService';
 
 export const teacherService = {
   async createTeacher(
@@ -41,6 +42,14 @@ export const teacherService = {
     const existing: Teacher[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     existing.push(teacher);
     localStorage.setItem(localKey, JSON.stringify(existing));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'TEACHER_REGISTERED',
+      actionCategory: 'ADMINISTRATION',
+      details: `Added new Teacher '${teacher.name}' (${teacher.email}, Mobile: ${teacher.mobile})`
+    });
 
     return teacher;
   },

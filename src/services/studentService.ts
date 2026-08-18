@@ -1,6 +1,7 @@
 import { collection, doc, setDoc, getDocs, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Student } from '../types';
+import { auditService } from './auditService';
 
 export const studentService = {
   async createStudent(tenantId: string, data: Omit<Student, 'id' | 'tenantId' | 'createdAt'>): Promise<Student> {
@@ -22,6 +23,14 @@ export const studentService = {
     const existing: Student[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     existing.push(student);
     localStorage.setItem(localKey, JSON.stringify(existing));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'STUDENT_ENROLLED',
+      actionCategory: 'ACADEMIC',
+      details: `Enrolled new Student '${student.name}' (Code: ${student.studentCode}, Class: ${student.classId})`
+    });
 
     return student;
   },

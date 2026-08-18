@@ -218,3 +218,20 @@ export interface MadrasaSubject {
   classId?: string;
   createdAt: string;
 }
+
+export type AuditCategory = 'AUTHENTICATION' | 'ACADEMIC' | 'FINANCE' | 'ADMINISTRATION' | 'SETTINGS';
+
+export interface AuditLog {
+  id: string;
+  tenantId?: string;
+  tenantName?: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  userRole: UserRole;
+  userEmail: string;
+  action: string;
+  actionCategory: AuditCategory;
+  details: string;
+  ipAddress?: string;
+}

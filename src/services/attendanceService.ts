@@ -2,6 +2,7 @@ import { collection, doc, setDoc, getDocs, query, where } from 'firebase/firesto
 import { db } from '../config/firebase';
 import { AttendanceRecord } from '../types';
 import { holidayService } from './holidayService';
+import { auditService } from './auditService';
 
 export const attendanceService = {
   async saveAttendance(
@@ -35,6 +36,17 @@ export const attendanceService = {
     if (idx >= 0) existing[idx] = record;
     else existing.push(record);
     localStorage.setItem(localKey, JSON.stringify(existing));
+
+    const count = Object.keys(records).length;
+    const presentCount = Object.values(records).filter(v => v === 'present').length;
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'ATTENDANCE_MARKED',
+      actionCategory: 'ACADEMIC',
+      details: `Marked Class Attendance for ${date} (${presentCount}/${count} Present)`
+    });
 
     return record;
   },

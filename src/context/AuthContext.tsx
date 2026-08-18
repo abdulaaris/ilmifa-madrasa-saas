@@ -20,9 +20,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const profile = await authService.getUserProfile(uid);
       setUser(profile);
+      if (profile) {
+        localStorage.setItem('ilmifa_current_user', JSON.stringify(profile));
+      } else {
+        localStorage.removeItem('ilmifa_current_user');
+      }
     } catch (err) {
       console.error('Failed to fetch user profile:', err);
       setUser(null);
+      localStorage.removeItem('ilmifa_current_user');
     }
   };
 
@@ -32,6 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchProfile(fbUser.uid);
       } else {
         setUser(null);
+        localStorage.removeItem('ilmifa_current_user');
       }
       setLoading(false);
     });

@@ -1,6 +1,7 @@
 import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { MadrasaClass } from '../types';
+import { auditService } from './auditService';
 
 export const classService = {
   async createClass(tenantId: string, data: Omit<MadrasaClass, 'id' | 'tenantId' | 'createdAt'>): Promise<MadrasaClass> {
@@ -22,6 +23,14 @@ export const classService = {
     const existing: MadrasaClass[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     existing.push(newClass);
     localStorage.setItem(localKey, JSON.stringify(existing));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'CLASS_CREATED',
+      actionCategory: 'ACADEMIC',
+      details: `Created new Class '${newClass.name} ${newClass.section ? `(${newClass.section})` : ''}'`
+    });
 
     return newClass;
   },

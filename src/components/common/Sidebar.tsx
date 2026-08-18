@@ -20,7 +20,8 @@ import {
   Bell, 
   Clock, 
   BookOpen,
-  Calendar
+  Calendar,
+  History
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -83,6 +84,10 @@ export const Sidebar: React.FC = () => {
             <NavLink to="/core/users" style={linkStyle}>
               <Users size={18} />
               <span>All Users</span>
+            </NavLink>
+            <NavLink to="/core/history" style={linkStyle}>
+              <History size={18} />
+              <span>Activity History</span>
             </NavLink>
             <NavLink to="/core/settings" style={linkStyle}>
               <Settings size={18} />

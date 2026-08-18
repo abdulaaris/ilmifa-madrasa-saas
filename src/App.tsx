@@ -14,6 +14,7 @@ import { CoreMadrasasPage } from './pages/core/CoreMadrasasPage';
 import { CoreDomainsPage } from './pages/core/CoreDomainsPage';
 import { CoreUsersPage } from './pages/core/CoreUsersPage';
 import { CoreSettingsPage } from './pages/core/CoreSettingsPage';
+import { CoreHistoryPage } from './pages/core/CoreHistoryPage';
 
 import { PortalLoginPage } from './pages/portal/PortalLoginPage';
 import { PrincipalDashboard } from './pages/portal/PrincipalDashboard';
@@ -52,6 +53,7 @@ export const App: React.FC = () => {
             <Route path="/core/madrasas" element={<AuthGuard><RoleGuard allowedRoles={['SUPER_ADMIN']}><CoreMadrasasPage /></RoleGuard></AuthGuard>} />
             <Route path="/core/domains" element={<AuthGuard><RoleGuard allowedRoles={['SUPER_ADMIN']}><CoreDomainsPage /></RoleGuard></AuthGuard>} />
             <Route path="/core/users" element={<AuthGuard><RoleGuard allowedRoles={['SUPER_ADMIN']}><CoreUsersPage /></RoleGuard></AuthGuard>} />
+            <Route path="/core/history" element={<AuthGuard><RoleGuard allowedRoles={['SUPER_ADMIN']}><CoreHistoryPage /></RoleGuard></AuthGuard>} />
             <Route path="/core/settings" element={<AuthGuard><RoleGuard allowedRoles={['SUPER_ADMIN']}><CoreSettingsPage /></RoleGuard></AuthGuard>} />
 
             {/* Customer Tenant Portal Routes */}

@@ -1,6 +1,7 @@
 import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { FeeRecord } from '../types';
+import { auditService } from './auditService';
 
 export const feeService = {
   async createFeeRecord(tenantId: string, data: Omit<FeeRecord, 'id' | 'tenantId' | 'balance' | 'status' | 'createdAt'>): Promise<FeeRecord> {
@@ -29,6 +30,14 @@ export const feeService = {
     const existing: FeeRecord[] = JSON.parse(localStorage.getItem(localKey) || '[]');
     existing.push(record);
     localStorage.setItem(localKey, JSON.stringify(existing));
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      action: 'FEE_RECORD_CREATED',
+      actionCategory: 'FINANCE',
+      details: `Created Fee Record of ₹${data.feeAmount} for Student '${data.studentName}' (${data.month})`
+    });
 
     return record;
   },

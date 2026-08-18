@@ -2,6 +2,7 @@ import { collection, doc, setDoc, getDoc, getDocs, query, where, updateDoc } fro
 import { db } from '../config/firebase';
 import { MadrasaTenant, MadrasaModule, MadrasaStatus, TenantBranding, DomainStatus } from '../types';
 import { userService } from './userService';
+import { auditService } from './auditService';
 
 export const tenantService = {
   /**
@@ -76,6 +77,19 @@ export const tenantService = {
     // Backup to localStorage for local dev resilience
     localStorage.setItem(`tenant_${tenantId}`, JSON.stringify(tenant));
     localStorage.setItem(`tenant_slug_${tenant.slug}`, tenantId);
+
+    // Real-time Audit History Log
+    await auditService.logActivity({
+      tenantId: tenantId,
+      tenantName: params.name,
+      userId: 'usr-admin-01',
+      userName: 'Super Admin',
+      userRole: 'SUPER_ADMIN',
+      userEmail: 'admin@ilmifa.com',
+      action: 'TENANT_CREATED',
+      actionCategory: 'ADMINISTRATION',
+      details: `Created new Madrasa Tenant '${params.name}' (ID: ${tenantId}, Principal: ${params.principalName} <${params.principalEmail}>)`
+    });
 
     return { tenant, principalUid: principalUser.uid };
   },
