@@ -21,7 +21,8 @@ import {
   Clock, 
   BookOpen,
   Calendar,
-  History
+  History,
+  MoreHorizontal
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -173,6 +174,10 @@ export const Sidebar: React.FC = () => {
                 <span>Timetable</span>
               </NavLink>
             )}
+            <NavLink to={`/m/${tenantSlug}/principal/more`} style={linkStyle}>
+              <MoreHorizontal size={18} />
+              <span>More</span>
+            </NavLink>
           </div>
         )}
 

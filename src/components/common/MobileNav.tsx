@@ -12,7 +12,8 @@ import {
   Building, 
   Globe, 
   Users, 
-  BookOpen 
+  BookOpen,
+  MoreHorizontal
 } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {

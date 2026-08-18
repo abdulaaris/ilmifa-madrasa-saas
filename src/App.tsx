@@ -31,6 +31,8 @@ import { FeesPage } from './pages/portal/FeesPage';
 import { ExamsPage } from './pages/portal/ExamsPage';
 import { NoticesPage } from './pages/portal/NoticesPage';
 import { TimetablePage } from './pages/portal/TimetablePage';
+import { PrincipalMorePage } from './pages/principal/PrincipalMorePage';
+import { PrincipalAcademicYearPage } from './pages/principal/PrincipalAcademicYearPage';
 import { PWAInstallBanner } from './components/common/PWAInstallBanner';
 import { DynamicPWATheme } from './components/common/DynamicPWATheme';
 import { MobileOrientationGuard } from './components/common/MobileOrientationGuard';
@@ -74,6 +76,8 @@ export const App: React.FC = () => {
             <Route path="/m/:tenantSlug/principal/results" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="results"><ExamsPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/principal/notices" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="notices"><NoticesPage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
             <Route path="/m/:tenantSlug/principal/timetable" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><ModuleGuard moduleKey="timetable"><TimetablePage /></ModuleGuard></RoleGuard></TenantGuard></AuthGuard>} />
+            <Route path="/m/:tenantSlug/principal/more" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><PrincipalMorePage /></RoleGuard></TenantGuard></AuthGuard>} />
+            <Route path="/m/:tenantSlug/principal/academic-year" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['PRINCIPAL']}><PrincipalAcademicYearPage /></RoleGuard></TenantGuard></AuthGuard>} />
 
             {/* Teacher Routes */}
             <Route path="/m/:tenantSlug/teacher" element={<AuthGuard><TenantGuard><RoleGuard allowedRoles={['TEACHER']}><TeacherDashboard /></RoleGuard></TenantGuard></AuthGuard>} />

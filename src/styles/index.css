@@ -367,3 +367,41 @@ input, select, textarea, button {
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3) !important;
   }
 }
+
+/* --- RESPONSIVE CALENDAR GRID FOR MOBILE --- */
+.parent-calendar-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.parent-calendar-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.parent-calendar-cell {
+  aspect-ratio: 1 / 1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+@media (max-width: 640px) {
+  .parent-calendar-grid {
+    gap: 3px !important;
+  }
+  .parent-calendar-cell {
+    padding: 2px !important;
+    border-radius: 8px !important;
+  }
+  .parent-calendar-cell span {
+    font-size: 11px !important;
+  }
+}
+

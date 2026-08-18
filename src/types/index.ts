@@ -235,3 +235,16 @@ export interface AuditLog {
   details: string;
   ipAddress?: string;
 }
+
+export interface AcademicYear {
+  id: string;
+  tenantId: string;
+  name: string; // e.g. "2026–2027"
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  status: 'active' | 'upcoming' | 'completed';
+  description?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+

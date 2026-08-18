@@ -25,7 +25,8 @@ import {
   Building2,
   Shield,
   User,
-  History
+  History,
+  MoreHorizontal
 } from 'lucide-react';
 
 interface MobileDrawerProps {
@@ -265,6 +266,10 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                   <span>Timetable Schedule</span>
                 </NavLink>
               )}
+              <NavLink to={`/m/${tenantSlug}/principal/more`} onClick={onClose} style={linkStyle}>
+                <MoreHorizontal size={18} />
+                <span>More (Academic Year)</span>
+              </NavLink>
             </div>
           )}
 
